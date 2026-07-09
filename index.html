@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="算数バトル">
+<title>算数バトル</title>
+<style>
+  :root{
+    --bg1:#1b1035; --bg2:#3a1668; --card:#2a1550; --accent:#ff7b3d; --accent2:#ffd23d;
+    --good:#3ddc84; --bad:#ff5d5d; --text:#fff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none;}
+  html,body{height:100%; margin:0;}
+  body{
+    font-family:"Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+    background:linear-gradient(160deg,var(--bg1),var(--bg2));
+    color:var(--text);
+    min-height:100vh;
+    display:flex; flex-direction:column;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+    overflow:hidden;
+  }
+  .screen{flex:1; display:flex; flex-direction:column; padding:14px; min-height:0;}
+  .hidden{display:none !important;}
+
+  /* ---- top bar ---- */
+  .topbar{display:flex; align-items:center; justify-content:space-between; font-size:14px; opacity:.9; padding:2px 4px 8px;}
+  .lvbadge{background:var(--accent); padding:3px 10px; border-radius:20px; font-weight:bold;}
+  .streak{color:var(--accent2); font-weight:bold;}
+  .gear{background:none; border:none; color:#fff; font-size:20px; opacity:.7;}
+
+  /* ---- monster area ---- */
+  .arena{flex:0 0 auto; display:flex; flex-direction:column; align-items:center; padding:6px 0 10px;}
+  .monstername{font-size:15px; opacity:.85; margin-bottom:4px;}
+  .monster{font-size:64px; line-height:1; transition:transform .15s;}
+  .monster.hit{animation:shake .35s;}
+  .monster.dead{animation:poof .4s forwards;}
+  @keyframes shake{
+    0%,100%{transform:translateX(0) scale(1);}
+    20%{transform:translateX(-10px) scale(1.05);}
+    40%{transform:translateX(8px) scale(.97);}
+    60%{transform:translateX(-6px) scale(1.03);}
+    80%{transform:translateX(4px) scale(1);}
+  }
+  @keyframes poof{ to{ transform:scale(1.6); opacity:0; } }
+  .hpwrap{width:80%; max-width:320px; margin-top:8px;}
+  .hpbar-bg{background:#00000055; border-radius:10px; height:14px; overflow:hidden; border:2px solid #ffffff33;}
+  .hpbar-fill{background:linear-gradient(90deg,#ff5d5d,#ffb03d); height:100%; transition:width .3s;}
+  .hptext{font-size:11px; text-align:right; opacity:.7; margin-top:2px;}
+  .monsterdots{display:flex; gap:6px; margin-top:8px;}
+  .mdot{width:9px; height:9px; border-radius:50%; background:#ffffff33;}
+  .mdot.done{background:var(--accent2);}
+  .mdot.cur{background:var(--accent);}
+
+  /* ---- question ---- */
+  .qcard{
+    background:var(--card); border-radius:22px; padding:18px 10px; margin:8px 0;
+    text-align:center; box-shadow:0 6px 18px #00000040; flex:0 0 auto;
+  }
+  .qtext{font-size:44px; font-weight:bold; letter-spacing:2px;}
+  .answerbox{
+    margin-top:10px; font-size:34px; font-weight:bold; min-height:46px;
+    background:#00000030; border-radius:14px; padding:6px; letter-spacing:4px;
+    color:var(--accent2);
+  }
+  .feedback{
+    position:absolute; top:44%; left:50%; transform:translate(-50%,-50%) scale(.6);
+    font-size:32px; font-weight:bold; opacity:0; pointer-events:none; z-index:5;
+    text-shadow:0 2px 8px #000;
+  }
+  .feedback.show{animation:pop .7s ease-out forwards;}
+  @keyframes pop{
+    0%{opacity:0; transform:translate(-50%,-50%) scale(.5);}
+    20%{opacity:1; transform:translate(-50%,-50%) scale(1.15);}
+    35%{transform:translate(-50%,-50%) scale(1);}
+    80%{opacity:1;}
+    100%{opacity:0; transform:translate(-50%,-60%) scale(1);}
+  }
+  .feedback.good{color:var(--good);}
+  .feedback.bad{color:var(--bad);}
+
+  /* ---- keypad ---- */
+  .keypad{
+    margin-top:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+    padding-top:8px;
+  }
+  .key{
+    background:#ffffff14; border:1px solid #ffffff22; color:#fff; font-size:26px; font-weight:bold;
+    border-radius:14px; padding:14px 0; transition:background .1s;
+  }
+  .key:active{background:var(--accent); transform:scale(.96);}
+  .key.wide{grid-column:span 1;}
+  .key.submit{background:var(--good); color:#062;}
+  .key.submit:active{background:#2fc474;}
+  .key.del{background:#ffffff10; font-size:20px;}
+
+  /* ---- result screen ---- */
+  .resultwrap{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:10px;}
+  .resulttitle{font-size:30px; font-weight:bold; color:var(--accent2);}
+  .statgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:320px; margin:10px 0;}
+  .stat{background:var(--card); border-radius:14px; padding:10px; }
+  .stat .num{font-size:22px; font-weight:bold; color:var(--accent2);}
+  .stat .lbl{font-size:11px; opacity:.7;}
+  .bigbtn{
+    background:var(--accent); border:none; color:#fff; font-size:18px; font-weight:bold;
+    padding:14px 28px; border-radius:30px; margin-top:6px; width:100%; max-width:320px;
+  }
+  .linkbtn{background:none; border:none; color:#ffffffaa; text-decoration:underline; font-size:13px; margin-top:14px;}
+
+  /* ---- parent panel ---- */
+  .overlay{
+    position:fixed; inset:0; background:#000000cc; display:flex; align-items:center; justify-content:center; z-index:20; padding:20px;
+  }
+  .panel{background:var(--card); border-radius:18px; padding:18px; width:100%; max-width:360px; max-height:85vh; overflow:auto;}
+  .panel h3{margin-top:0;}
+  .panel table{width:100%; font-size:13px; border-collapse:collapse;}
+  .panel td{padding:4px 2px; border-bottom:1px solid #ffffff1a;}
+  .panelbtns{display:flex; flex-direction:column; gap:8px; margin-top:14px;}
+  .panelbtns button{
+    background:#ffffff14; border:1px solid #ffffff30; color:#fff; padding:10px; border-radius:10px; font-size:14px;
+  }
+  .panelbtns button.danger{color:var(--bad); border-color:#ff5d5d55;}
+  .closepanel{margin-top:10px; width:100%; background:none; border:none; color:#aaa; font-size:14px; padding:8px;}
+</style>
+</head>
+<body>
+
+<div id="screen-game" class="screen">
+  <div class="topbar">
+    <span class="lvbadge" id="lvBadge">Lv.1</span>
+    <span class="streak" id="streakText"></span>
+    <button class="gear" id="gearBtn">⚙</button>
+  </div>
+
+  <div class="arena">
+    <div class="monstername" id="monsterName">-</div>
+    <div class="monster" id="monsterEmoji">🐲</div>
+    <div class="hpwrap">
+      <div class="hpbar-bg"><div class="hpbar-fill" id="hpFill" style="width:100%"></div></div>
+      <div class="hptext" id="hpText">30/30</div>
+    </div>
+    <div class="monsterdots" id="monsterDots"></div>
+  </div>
+
+  <div class="qcard" style="position:relative;">
+    <div class="qtext" id="qText">?</div>
+    <div class="answerbox" id="answerBox">&nbsp;</div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <div class="keypad" id="keypad"></div>
+</div>
+
+<div id="screen-result" class="screen hidden">
+  <div class="resultwrap">
+    <div class="resulttitle" id="resultTitle">クリア！</div>
+    <div style="font-size:50px;" id="resultEmoji">🏆</div>
+    <div class="statgrid">
+      <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">といた もんだい</div></div>
+      <div class="stat"><div class="num" id="statCorrect">0</div><div class="lbl">せいかい</div></div>
+      <div class="stat"><div class="num" id="statRate">0%</div><div class="lbl">せいかいりつ</div></div>
+      <div class="stat"><div class="num" id="statLv">1</div><div class="lbl">とうたつレベル</div></div>
+    </div>
+    <button class="bigbtn" id="retryBtn">もういちど バトル！</button>
+    <button class="linkbtn" id="parentLinkBtn">保護者の方はこちら</button>
+  </div>
+</div>
+
+<div id="parentOverlay" class="overlay hidden">
+  <div class="panel">
+    <h3>保護者用メニュー</h3>
+    <div id="weaknessList" style="font-size:13px; opacity:.85;">読み込み中…</div>
+    <div class="panelbtns">
+      <button id="exportBtn">誤答ログを書き出す（JSON）</button>
+      <button id="resetBtn" class="danger">記録をリセットする</button>
+    </div>
+    <button class="closepanel" id="closePanelBtn">とじる</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var LS_KEY = "mathBattle_v1";
+
+  function loadState(){
+    var raw = localStorage.getItem(LS_KEY);
+    var def = { level:1, weakness:{}, pendingReview:[], wrongLog:[] };
+    if(!raw) return def;
+    try{
+      var parsed = JSON.parse(raw);
+      return Object.assign(def, parsed);
+    }catch(e){ return def; }
+  }
+  function saveState(){
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      level: persist.level,
+      weakness: persist.weakness,
+      pendingReview: persist.pendingReview,
+      wrongLog: persist.wrongLog.slice(-500) // avoid unbounded growth
+    }));
+  }
+
+  var persist = loadState();
+
+  var MONSTER_POOL = [
+    {name:"ちびドラ", emoji:"🐲"}, {name:"いわとげ", emoji:"🦖"},
+    {name:"うみうねり", emoji:"🐙"}, {name:"すなさそり", emoji:"🦂"},
+    {name:"かぜおおかみ", emoji:"🐺"}, {name:"ほのおとり", emoji:"🦅"},
+    {name:"つのおに", emoji:"👹"}, {name:"いかりめん", emoji:"👺"}
+  ];
+  var MONSTER_HP = [30, 40, 55];
+
+  // ---- session (in-memory) state ----
+  var S = {
+    level: persist.level || 1,
+    correctStreak: 0,
+    wrongStreak: 0,
+    dueQueue: [],           // {a,b,op,key,turnsLeft}
+    sessionWrong: [],       // [{a,b,op,key}] this session, most recent last
+    poolCache: {},          // level -> array of {a,b,op}
+    monsters: [],           // this session's 3 monsters
+    monsterIndex: 0,
+    enemyHp: 0,
+    enemyHpMax: 0,
+    totalQuestions: 0,
+    correctCount: 0,
+    monstersDefeated: 0,
+    current: null,          // current question {a,b,op,key, fromDue}
+    answer: "",
+    locked: false,
+    QUESTION_CAP: 30
+  };
+
+  function key(a,b,op){ return a+op+b; }
+
+  function buildPool(level){
+    if(S.poolCache[level]) return S.poolCache[level];
+    var pool = [];
+    function push(a,b,op){ pool.push({a:a,b:b,op:op}); }
+    if(level<=1){
+      for(var a=1;a<=9;a++) for(var b=1;b<=9;b++) if(a+b<=10) push(a,b,'+');
+      for(a=1;a<=9;a++) for(b=0;b<=a;b++) push(a,b,'-');
+    } else if(level===2){
+      for(a=1;a<=9;a++) for(b=1;b<=9;b++) if(a+b>=11 && a+b<=18) push(a,b,'+');
+      for(a=11;a<=18;a++) for(b=2;b<=9;b++) if((a%10)<b && a-b>=1) push(a,b,'-');
+    } else if(level===3){
+      for(a=10;a<=89;a++) for(b=1;b<=9;b++) if((a%10+b)<=9) push(a,b,'+');
+      for(a=10;a<=98;a++) for(b=1;b<=9;b++) if((a%10)>=b) push(a,b,'-');
+    } else if(level===4){
+      for(a=10;a<=89;a++) for(b=1;b<=9;b++) if((a%10+b)>=10) push(a,b,'+');
+      for(a=11;a<=98;a++) for(b=1;b<=9;b++) if((a%10)<b) push(a,b,'-');
+    } else if(level===5){
+      for(a=10;a<=89;a++) for(b=10;b<=89;b++) if((a%10+b%10)<=9 && a+b<=99) push(a,b,'+');
+      for(a=20;a<=99;a++) for(b=10;b<=89;b++) if(a-b>=1 && (a%10)>=(b%10)) push(a,b,'-');
+    } else {
+      for(a=10;a<=89;a++) for(b=10;b<=89;b++) if((a%10+b%10)>=10 && a+b<=99) push(a,b,'+');
+      for(a=21;a<=99;a++) for(b=10;b<=89;b++) if(a-b>=1 && (a%10)<(b%10)) push(a,b,'-');
+    }
+    S.poolCache[level] = pool;
+    return pool;
+  }
+
+  function pickWeighted(level){
+    var pool = buildPool(level);
+    var total = 0;
+    var weights = new Array(pool.length);
+    for(var i=0;i<pool.length;i++){
+      var k = key(pool[i].a, pool[i].b, pool[i].op);
+      var w = 1 + Math.min(persist.weakness[k] || 0, 20);
+      weights[i] = w;
+      total += w;
+    }
+    var r = Math.random() * total;
+    for(i=0;i<pool.length;i++){
+      r -= weights[i];
+      if(r<=0) return pool[i];
+    }
+    return pool[pool.length-1];
+  }
+
+  function nextQuestion(){
+    // decrement due queue, check for something ready
+    var ready = null;
+    for(var i=0;i<S.dueQueue.length;i++){
+      S.dueQueue[i].turnsLeft -= 1;
+    }
+    for(i=0;i<S.dueQueue.length;i++){
+      if(S.dueQueue[i].turnsLeft<=0){ ready = S.dueQueue.splice(i,1)[0]; break; }
+    }
+    var q;
+    if(ready){
+      q = {a:ready.a, b:ready.b, op:ready.op, key:ready.key, fromDue:true};
+    } else {
+      var picked = pickWeighted(S.level);
+      q = {a:picked.a, b:picked.b, op:picked.op, key:key(picked.a,picked.b,picked.op), fromDue:false};
+    }
+    S.current = q;
+    S.answer = "";
+    renderQuestion();
+  }
+
+  // ---- rendering ----
+  var qText = document.getElementById('qText');
+  var answerBox = document.getElementById('answerBox');
+  var lvBadge = document.getElementById('lvBadge');
+  var streakText = document.getElementById('streakText');
+  var monsterName = document.getElementById('monsterName');
+  var monsterEmoji = document.getElementById('monsterEmoji');
+  var hpFill = document.getElementById('hpFill');
+  var hpText = document.getElementById('hpText');
+  var monsterDots = document.getElementById('monsterDots');
+  var feedback = document.getElementById('feedback');
+  var keypad = document.getElementById('keypad');
+
+  function renderQuestion(){
+    var opSym = S.current.op === '+' ? '＋' : 'ー';
+    qText.textContent = S.current.a + ' ' + opSym + ' ' + S.current.b + ' = ';
+    answerBox.textContent = S.answer.length ? S.answer : ' ';
+    lvBadge.textContent = 'Lv.' + S.level;
+    streakText.textContent = S.correctStreak>0 ? ('🔥x'+S.correctStreak) : '';
+  }
+
+  function renderMonster(introAnim){
+    var m = S.monsters[S.monsterIndex];
+    monsterName.textContent = m.name;
+    monsterEmoji.textContent = m.emoji;
+    monsterEmoji.classList.remove('hit','dead');
+    var pct = Math.max(0, Math.round(100*S.enemyHp/S.enemyHpMax));
+    hpFill.style.width = pct + '%';
+    hpText.textContent = Math.max(0,S.enemyHp) + '/' + S.enemyHpMax;
+    monsterDots.innerHTML = '';
+    for(var i=0;i<S.monsters.length;i++){
+      var d = document.createElement('div');
+      d.className = 'mdot' + (i<S.monsterIndex ? ' done' : (i===S.monsterIndex ? ' cur' : ''));
+      monsterDots.appendChild(d);
+    }
+  }
+
+  function buildKeypad(){
+    keypad.innerHTML = '';
+    var layout = ['1','2','3','4','5','6','7','8','9','del','0','ok'];
+    layout.forEach(function(k){
+      var btn = document.createElement('button');
+      btn.className = 'key';
+      if(k==='del'){ btn.className+=' del'; btn.textContent='⌫'; }
+      else if(k==='ok'){ btn.className+=' submit'; btn.textContent='けってい'; }
+      else { btn.textContent = k; }
+      btn.addEventListener('click', function(){ onKey(k); });
+      keypad.appendChild(btn);
+    });
+  }
+
+  function onKey(k){
+    if(S.locked) return;
+    if(k==='del'){ S.answer = S.answer.slice(0,-1); renderQuestion(); return; }
+    if(k==='ok'){ submitAnswer(); return; }
+    if(S.answer.length>=3) return;
+    S.answer += k;
+    renderQuestion();
+  }
+
+  function showFeedback(good){
+    feedback.textContent = good ? 'せいかい！' : 'はずれ！';
+    feedback.className = 'feedback show ' + (good?'good':'bad');
+    setTimeout(function(){ feedback.className='feedback'; }, 700);
+  }
+
+  function submitAnswer(){
+    if(S.locked || S.answer==='') return;
+    S.locked = true;
+    var correctAns = S.current.op==='+' ? S.current.a+S.current.b : S.current.a-S.current.b;
+    var userAns = parseInt(S.answer,10);
+    var good = userAns === correctAns;
+    S.totalQuestions++;
+
+    if(good){
+      S.correctCount++;
+      S.correctStreak++; S.wrongStreak = 0;
+      persist.weakness[S.current.key] = Math.max((persist.weakness[S.current.key]||0)-1, 0);
+
+      // damage enemy
+      var dmg = 8 + Math.floor(Math.random()*5);
+      S.enemyHp -= dmg;
+      monsterEmoji.classList.add('hit');
+      showFeedback(true);
+
+      if(S.correctStreak>=3){ S.level = Math.min(S.level+1,6); S.correctStreak=0; persist.level=S.level; }
+
+      if(S.enemyHp<=0){
+        S.monstersDefeated++;
+        monsterEmoji.classList.add('dead');
+        setTimeout(function(){
+          if(S.monsterIndex < S.monsters.length-1){
+            S.monsterIndex++;
+            S.enemyHpMax = MONSTER_HP[S.monsterIndex];
+            S.enemyHp = S.enemyHpMax;
+            renderMonster();
+            afterAnswerContinue();
+          } else {
+            saveState();
+            showResult(true);
+          }
+        }, 500);
+        return;
+      }
+    } else {
+      S.wrongStreak++; S.correctStreak=0;
+      persist.weakness[S.current.key] = Math.min((persist.weakness[S.current.key]||0)+3, 30);
+      persist.wrongLog.push({t:Date.now(), a:S.current.a, b:S.current.b, op:S.current.op, ans:correctAns, user:userAns, level:S.level});
+      S.sessionWrong.push({a:S.current.a,b:S.current.b,op:S.current.op,key:S.current.key});
+      // spaced repetition: soon + later
+      S.dueQueue.push({a:S.current.a,b:S.current.b,op:S.current.op,key:S.current.key,turnsLeft:1});
+      S.dueQueue.push({a:S.current.a,b:S.current.b,op:S.current.op,key:S.current.key,turnsLeft:4+Math.floor(Math.random()*3)});
+      if(S.dueQueue.length>8) S.dueQueue.splice(0, S.dueQueue.length-8);
+      showFeedback(false);
+
+      if(S.wrongStreak>=2){ S.level = Math.max(S.level-1,1); S.wrongStreak=0; persist.level=S.level; }
+    }
+
+    renderMonster();
+    saveState();
+
+    if(S.totalQuestions>=S.QUESTION_CAP){
+      setTimeout(function(){ showResult(false); }, 500);
+      return;
+    }
+    afterAnswerContinue();
+  }
+
+  function afterAnswerContinue(){
+    setTimeout(function(){
+      S.locked = false;
+      nextQuestion();
+    }, 550);
+  }
+
+  // ---- session lifecycle ----
+  function pickMonsters(){
+    var pool = MONSTER_POOL.slice();
+    for(var i=pool.length-1;i>0;i--){
+      var j = Math.floor(Math.random()*(i+1));
+      var t=pool[i]; pool[i]=pool[j]; pool[j]=t;
+    }
+    return pool.slice(0,3);
+  }
+
+  function newSession(){
+    S.level = persist.level || 1;
+    S.correctStreak = 0; S.wrongStreak = 0;
+    S.dueQueue = [];
+    S.sessionWrong = [];
+    S.monsters = pickMonsters();
+    S.monsterIndex = 0;
+    S.enemyHpMax = MONSTER_HP[0];
+    S.enemyHp = S.enemyHpMax;
+    S.totalQuestions = 0;
+    S.correctCount = 0;
+    S.monstersDefeated = 0;
+    S.locked = false;
+
+    // load carry-over review items from previous session, spaced through early turns
+    var pending = persist.pendingReview || [];
+    pending.slice(0,5).forEach(function(item, idx){
+      S.dueQueue.push({a:item.a,b:item.b,op:item.op,key:item.key, turnsLeft: 2 + idx*3});
+    });
+    persist.pendingReview = [];
+
+    document.getElementById('screen-result').classList.add('hidden');
+    document.getElementById('screen-game').classList.remove('hidden');
+    renderMonster();
+    nextQuestion();
+  }
+
+  function showResult(won){
+    // carry forward review items for next session
+    var carry = [];
+    var seen = {};
+    S.dueQueue.concat(S.sessionWrong).forEach(function(item){
+      if(!seen[item.key]){ seen[item.key]=true; carry.push({a:item.a,b:item.b,op:item.op,key:item.key}); }
+    });
+    persist.pendingReview = carry.slice(-5);
+    saveState();
+
+    document.getElementById('screen-game').classList.add('hidden');
+    document.getElementById('screen-result').classList.remove('hidden');
+    document.getElementById('resultTitle').textContent = won ? 'ぜんぶ たおした！' : 'きょうは ここまで！';
+    document.getElementById('resultEmoji').textContent = won ? '🏆' : '⏳';
+    document.getElementById('statTotal').textContent = S.totalQuestions;
+    document.getElementById('statCorrect').textContent = S.correctCount;
+    var rate = S.totalQuestions ? Math.round(100*S.correctCount/S.totalQuestions) : 0;
+    document.getElementById('statRate').textContent = rate + '%';
+    document.getElementById('statLv').textContent = S.level;
+  }
+
+  // ---- parent panel ----
+  function renderWeaknessList(){
+    var el = document.getElementById('weaknessList');
+    var entries = Object.keys(persist.weakness)
+      .map(function(k){ return {k:k, score:persist.weakness[k]}; })
+      .filter(function(e){ return e.score>0; })
+      .sort(function(a,b){ return b.score-a.score; })
+      .slice(0,8);
+    if(entries.length===0){
+      el.innerHTML = '<p>まだ苦手データがありません。</p>';
+      return;
+    }
+    var html = '<p>苦手な問題（上位）</p><table>';
+    entries.forEach(function(e){
+      html += '<tr><td>'+e.k.replace('+','＋').replace('-','ー')+'</td><td style="text-align:right">スコア '+e.score+'</td></tr>';
+    });
+    html += '</table>';
+    el.innerHTML = html;
+  }
+
+  function exportLog(){
+    var data = {
+      exportedAt: new Date().toISOString(),
+      level: S.level,
+      weakness: persist.weakness,
+      wrongLog: persist.wrongLog
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'mathbattle_log_' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function resetData(){
+    if(!confirm('記録をぜんぶリセットします。よろしいですか？')) return;
+    persist = { level:1, weakness:{}, pendingReview:[], wrongLog:[] };
+    saveState();
+    renderWeaknessList();
+    alert('リセットしました。');
+  }
+
+  // ---- wire up ----
+  document.getElementById('gearBtn').addEventListener('click', function(){
+    renderWeaknessList();
+    document.getElementById('parentOverlay').classList.remove('hidden');
+  });
+  document.getElementById('parentLinkBtn').addEventListener('click', function(){
+    renderWeaknessList();
+    document.getElementById('parentOverlay').classList.remove('hidden');
+  });
+  document.getElementById('closePanelBtn').addEventListener('click', function(){
+    document.getElementById('parentOverlay').classList.add('hidden');
+  });
+  document.getElementById('exportBtn').addEventListener('click', exportLog);
+  document.getElementById('resetBtn').addEventListener('click', resetData);
+  document.getElementById('retryBtn').addEventListener('click', newSession);
+
+  document.addEventListener('keydown', function(e){
+    if(e.key>='0' && e.key<='9') onKey(e.key);
+    else if(e.key==='Backspace') onKey('del');
+    else if(e.key==='Enter') onKey('ok');
+  });
+
+  buildKeypad();
+  newSession();
+
+  // debug hook (harmless in normal use; lets developers inspect state via console)
+  if(typeof window!=='undefined'){
+    window.__mb_debug = { S:S, persist:persist, onKey:onKey, newSession:newSession };
+  }
+})();
+</script>
+</body>
+</html>
