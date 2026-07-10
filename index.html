@@ -33,12 +33,38 @@
   .streak{color:var(--accent2); font-weight:bold;}
   .gear{background:none; border:none; color:#fff; font-size:20px; opacity:.7;}
 
-  /* ---- monster area ---- */
-  .arena{flex:0 0 auto; display:flex; flex-direction:column; align-items:center; padding:6px 0 10px;}
-  .monstername{font-size:15px; opacity:.85; margin-bottom:4px;}
-  .monster{font-size:64px; line-height:1; transition:transform .15s;}
-  .monster.hit{animation:shake .35s;}
-  .monster.dead{animation:poof .4s forwards;}
+  /* ---- character select screen ---- */
+  .selecttitle{font-size:21px; font-weight:bold; text-align:center; margin:8px 0 14px;}
+  .fightergrid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+    overflow-y:auto; flex:1; align-content:start; padding-bottom:8px;
+  }
+  .fightercard{
+    background:#ffffff12; border:2px solid transparent; border-radius:16px; padding:14px 4px 10px;
+    display:flex; flex-direction:column; align-items:center; gap:4px; color:#fff;
+  }
+  .fightercard .fcemoji{font-size:38px;}
+  .fightercard .fcname{font-size:11px; opacity:.85; text-align:center;}
+  .fightercard.selected{border-color:var(--accent2); background:#ffffff26; transform:scale(1.04);}
+  .fightercard:active{transform:scale(.96);}
+  #startBtn:disabled{opacity:.35;}
+
+  /* ---- battle arena (player vs enemy) ---- */
+  .arena{
+    flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    gap:6px; padding:6px 2px 10px;
+  }
+  .fighterside{display:flex; flex-direction:column; align-items:center; flex:1 1 0; min-width:0;}
+  .fightername{
+    font-size:12px; opacity:.85; margin-bottom:4px; text-align:center;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+  }
+  .fighter{font-size:56px; line-height:1; display:inline-block;}
+  .fighter.hit{animation:shake .35s;}
+  .fighter.dead{animation:poof .4s forwards;}
+  .fighter.attack{animation:lunge .45s ease-out;}
+  .fighter.fumble{animation:wobble .4s ease-out;}
+  .fighter.dodge{animation:dodge .35s ease-out;}
   @keyframes shake{
     0%,100%{transform:translateX(0) scale(1);}
     20%{transform:translateX(-10px) scale(1.05);}
@@ -47,11 +73,29 @@
     80%{transform:translateX(4px) scale(1);}
   }
   @keyframes poof{ to{ transform:scale(1.6); opacity:0; } }
-  .hpwrap{width:80%; max-width:320px; margin-top:8px;}
-  .hpbar-bg{background:#00000055; border-radius:10px; height:14px; overflow:hidden; border:2px solid #ffffff33;}
+  @keyframes lunge{
+    0%{transform:translateX(0) scale(1);}
+    35%{transform:translateX(20px) scale(1.1) rotate(-6deg);}
+    60%{transform:translateX(-6px) scale(1.02);}
+    100%{transform:translateX(0) scale(1);}
+  }
+  @keyframes wobble{
+    0%,100%{transform:rotate(0deg) translateY(0);}
+    25%{transform:rotate(-10deg) translateY(2px);}
+    50%{transform:rotate(0deg);}
+    75%{transform:rotate(10deg) translateY(2px);}
+  }
+  @keyframes dodge{
+    0%,100%{transform:translateX(0);}
+    40%{transform:translateX(16px);}
+    70%{transform:translateX(-5px);}
+  }
+  .vsdivider{font-size:16px; opacity:.5; padding:0 2px; flex:0 0 auto;}
+  .hpwrap{width:100%; max-width:150px; margin-top:6px;}
+  .hpbar-bg{background:#00000055; border-radius:10px; height:11px; overflow:hidden; border:2px solid #ffffff33;}
   .hpbar-fill{background:linear-gradient(90deg,#ff5d5d,#ffb03d); height:100%; transition:width .3s;}
-  .hptext{font-size:11px; text-align:right; opacity:.7; margin-top:2px;}
-  .monsterdots{display:flex; gap:6px; margin-top:8px;}
+  .hptext{font-size:10px; text-align:right; opacity:.7; margin-top:2px;}
+  .monsterdots{display:flex; gap:6px; margin-top:6px; justify-content:center;}
   .mdot{width:9px; height:9px; border-radius:50%; background:#ffffff33;}
   .mdot.done{background:var(--accent2);}
   .mdot.cur{background:var(--accent);}
@@ -129,7 +173,17 @@
 </head>
 <body>
 
-<div id="screen-game" class="screen">
+<div id="screen-select" class="screen">
+  <div class="topbar">
+    <span></span>
+    <span class="selecttitle" style="margin:0;">キャラをえらぼう！</span>
+    <button class="gear" id="gearBtnSelect">⚙</button>
+  </div>
+  <div class="fightergrid" id="fighterGrid"></div>
+  <button class="bigbtn" id="startBtn" disabled>たたかう！</button>
+</div>
+
+<div id="screen-game" class="screen hidden">
   <div class="topbar">
     <span class="lvbadge" id="lvBadge">Lv.1</span>
     <span class="streak" id="streakText"></span>
@@ -137,13 +191,20 @@
   </div>
 
   <div class="arena">
-    <div class="monstername" id="monsterName">-</div>
-    <div class="monster" id="monsterEmoji">🐲</div>
-    <div class="hpwrap">
-      <div class="hpbar-bg"><div class="hpbar-fill" id="hpFill" style="width:100%"></div></div>
-      <div class="hptext" id="hpText">30/30</div>
+    <div class="fighterside">
+      <div class="fightername" id="playerName">-</div>
+      <div class="fighter" id="playerEmoji">🙂</div>
     </div>
-    <div class="monsterdots" id="monsterDots"></div>
+    <div class="vsdivider">⚔️</div>
+    <div class="fighterside">
+      <div class="fightername" id="monsterName">-</div>
+      <div class="fighter" id="monsterEmoji">🐲</div>
+      <div class="hpwrap">
+        <div class="hpbar-bg"><div class="hpbar-fill" id="hpFill" style="width:100%"></div></div>
+        <div class="hptext" id="hpText">30/30</div>
+      </div>
+      <div class="monsterdots" id="monsterDots"></div>
+    </div>
   </div>
 
   <div class="qcard" style="position:relative;">
@@ -165,7 +226,7 @@
       <div class="stat"><div class="num" id="statRate">0%</div><div class="lbl">せいかいりつ</div></div>
       <div class="stat"><div class="num" id="statLv">1</div><div class="lbl">とうたつレベル</div></div>
     </div>
-    <button class="bigbtn" id="retryBtn">もういちど バトル！</button>
+    <button class="bigbtn" id="retryBtn">もういちど キャラをえらぶ</button>
     <button class="linkbtn" id="parentLinkBtn">保護者の方はこちら</button>
   </div>
 </div>
@@ -212,7 +273,8 @@
     {name:"ちびドラ", emoji:"🐲"}, {name:"いわとげ", emoji:"🦖"},
     {name:"うみうねり", emoji:"🐙"}, {name:"すなさそり", emoji:"🦂"},
     {name:"かぜおおかみ", emoji:"🐺"}, {name:"ほのおとり", emoji:"🦅"},
-    {name:"つのおに", emoji:"👹"}, {name:"いかりめん", emoji:"👺"}
+    {name:"つのおに", emoji:"👹"}, {name:"いかりめん", emoji:"👺"},
+    {name:"こおりぎつね", emoji:"🦊"}, {name:"らいじゅう", emoji:"🐯"}
   ];
   var MONSTER_HP = [30, 40, 55];
 
@@ -224,7 +286,8 @@
     dueQueue: [],           // {a,b,op,key,turnsLeft}
     sessionWrong: [],       // [{a,b,op,key}] this session, most recent last
     poolCache: {},          // level -> array of {a,b,op}
-    monsters: [],           // this session's 3 monsters
+    playerFighter: null,    // {name,emoji} chosen on the select screen
+    monsters: [],           // this session's 3 enemy monsters
     monsterIndex: 0,
     enemyHp: 0,
     enemyHpMax: 0,
@@ -284,6 +347,22 @@
     return pool[pool.length-1];
   }
 
+  // Schedule (or reschedule) a question for spaced-repetition review.
+  // Dedupes by key so the same problem never stacks multiple queue entries
+  // (that stacking was causing the same missed question to reappear on
+  // almost every turn). Only schedules an immediate "直後" reappearance
+  // when this is a fresh miss (not already a due-queue retry) — a repeat
+  // miss on a retry just pushes the "数問後" slot further out instead of
+  // looping the same question back-to-back.
+  function scheduleReview(a,b,op,k,immediate){
+    S.dueQueue = S.dueQueue.filter(function(it){ return it.key!==k; });
+    if(immediate){
+      S.dueQueue.push({a:a,b:b,op:op,key:k,turnsLeft:1});
+    }
+    S.dueQueue.push({a:a,b:b,op:op,key:k,turnsLeft:5+Math.floor(Math.random()*4)});
+    if(S.dueQueue.length>8) S.dueQueue.splice(0, S.dueQueue.length-8);
+  }
+
   function nextQuestion(){
     // decrement due queue, check for something ready
     var ready = null;
@@ -297,8 +376,17 @@
     if(ready){
       q = {a:ready.a, b:ready.b, op:ready.op, key:ready.key, fromDue:true};
     } else {
-      var picked = pickWeighted(S.level);
-      q = {a:picked.a, b:picked.b, op:picked.op, key:key(picked.a,picked.b,picked.op), fromDue:false};
+      // Avoid immediately re-asking the question that was just answered —
+      // weighted picks can otherwise collide with a due-queue reappearance
+      // and make the same problem show up two turns in a row by chance.
+      var lastKey = S.current ? S.current.key : null;
+      var picked, pickedKey, attempts = 0;
+      do {
+        picked = pickWeighted(S.level);
+        pickedKey = key(picked.a,picked.b,picked.op);
+        attempts++;
+      } while(pickedKey === lastKey && attempts < 6);
+      q = {a:picked.a, b:picked.b, op:picked.op, key:pickedKey, fromDue:false};
     }
     S.current = q;
     S.answer = "";
@@ -310,6 +398,8 @@
   var answerBox = document.getElementById('answerBox');
   var lvBadge = document.getElementById('lvBadge');
   var streakText = document.getElementById('streakText');
+  var playerName = document.getElementById('playerName');
+  var playerEmoji = document.getElementById('playerEmoji');
   var monsterName = document.getElementById('monsterName');
   var monsterEmoji = document.getElementById('monsterEmoji');
   var hpFill = document.getElementById('hpFill');
@@ -317,6 +407,16 @@
   var monsterDots = document.getElementById('monsterDots');
   var feedback = document.getElementById('feedback');
   var keypad = document.getElementById('keypad');
+  var fighterGrid = document.getElementById('fighterGrid');
+  var startBtn = document.getElementById('startBtn');
+
+  // Re-trigger a CSS animation on an element even if the class is already
+  // present, by removing it, forcing a reflow, then re-adding it.
+  function pulse(el, cls){
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+  }
 
   function renderQuestion(){
     var opSym = S.current.op === '+' ? '＋' : 'ー';
@@ -326,14 +426,24 @@
     streakText.textContent = S.correctStreak>0 ? ('🔥x'+S.correctStreak) : '';
   }
 
-  function renderMonster(introAnim){
-    var m = S.monsters[S.monsterIndex];
-    monsterName.textContent = m.name;
-    monsterEmoji.textContent = m.emoji;
-    monsterEmoji.classList.remove('hit','dead');
+  function updateHpBar(){
     var pct = Math.max(0, Math.round(100*S.enemyHp/S.enemyHpMax));
     hpFill.style.width = pct + '%';
     hpText.textContent = Math.max(0,S.enemyHp) + '/' + S.enemyHpMax;
+  }
+
+  function renderPlayer(){
+    playerName.textContent = S.playerFighter.name;
+    playerEmoji.textContent = S.playerFighter.emoji;
+    playerEmoji.classList.remove('attack','fumble');
+  }
+
+  function renderMonster(){
+    var m = S.monsters[S.monsterIndex];
+    monsterName.textContent = m.name;
+    monsterEmoji.textContent = m.emoji;
+    monsterEmoji.classList.remove('hit','dead','dodge');
+    updateHpBar();
     monsterDots.innerHTML = '';
     for(var i=0;i<S.monsters.length;i++){
       var d = document.createElement('div');
@@ -384,17 +494,20 @@
       S.correctStreak++; S.wrongStreak = 0;
       persist.weakness[S.current.key] = Math.max((persist.weakness[S.current.key]||0)-1, 0);
 
-      // damage enemy
+      // your fighter attacks the enemy
       var dmg = 8 + Math.floor(Math.random()*5);
       S.enemyHp -= dmg;
-      monsterEmoji.classList.add('hit');
+      pulse(playerEmoji, 'attack');
+      pulse(monsterEmoji, 'hit');
       showFeedback(true);
 
       if(S.correctStreak>=3){ S.level = Math.min(S.level+1,6); S.correctStreak=0; persist.level=S.level; }
 
       if(S.enemyHp<=0){
         S.monstersDefeated++;
-        monsterEmoji.classList.add('dead');
+        pulse(monsterEmoji, 'dead');
+        updateHpBar();
+        saveState();
         setTimeout(function(){
           if(S.monsterIndex < S.monsters.length-1){
             S.monsterIndex++;
@@ -403,31 +516,30 @@
             renderMonster();
             afterAnswerContinue();
           } else {
-            saveState();
             showResult(true);
           }
-        }, 500);
+        }, 550);
         return;
       }
+      updateHpBar();
     } else {
       S.wrongStreak++; S.correctStreak=0;
       persist.weakness[S.current.key] = Math.min((persist.weakness[S.current.key]||0)+3, 30);
       persist.wrongLog.push({t:Date.now(), a:S.current.a, b:S.current.b, op:S.current.op, ans:correctAns, user:userAns, level:S.level});
       S.sessionWrong.push({a:S.current.a,b:S.current.b,op:S.current.op,key:S.current.key});
-      // spaced repetition: soon + later
-      S.dueQueue.push({a:S.current.a,b:S.current.b,op:S.current.op,key:S.current.key,turnsLeft:1});
-      S.dueQueue.push({a:S.current.a,b:S.current.b,op:S.current.op,key:S.current.key,turnsLeft:4+Math.floor(Math.random()*3)});
-      if(S.dueQueue.length>8) S.dueQueue.splice(0, S.dueQueue.length-8);
+      // spaced repetition: soon (only for a fresh miss) + later
+      scheduleReview(S.current.a, S.current.b, S.current.op, S.current.key, !S.current.fromDue);
+      pulse(playerEmoji, 'fumble');
+      pulse(monsterEmoji, 'dodge');
       showFeedback(false);
 
       if(S.wrongStreak>=2){ S.level = Math.max(S.level-1,1); S.wrongStreak=0; persist.level=S.level; }
     }
 
-    renderMonster();
     saveState();
 
     if(S.totalQuestions>=S.QUESTION_CAP){
-      setTimeout(function(){ showResult(false); }, 500);
+      setTimeout(function(){ showResult(false); }, 550);
       return;
     }
     afterAnswerContinue();
@@ -440,9 +552,46 @@
     }, 550);
   }
 
+  // ---- character select ----
+  function renderSelectScreen(){
+    fighterGrid.innerHTML = '';
+    S.playerFighter = null;
+    startBtn.disabled = true;
+    MONSTER_POOL.forEach(function(m){
+      var card = document.createElement('button');
+      card.className = 'fightercard';
+      card.type = 'button';
+      var eDiv = document.createElement('div');
+      eDiv.className = 'fcemoji';
+      eDiv.textContent = m.emoji;
+      var nDiv = document.createElement('div');
+      nDiv.className = 'fcname';
+      nDiv.textContent = m.name;
+      card.appendChild(eDiv);
+      card.appendChild(nDiv);
+      card.addEventListener('click', function(){
+        S.playerFighter = m;
+        var cards = fighterGrid.querySelectorAll('.fightercard');
+        for(var i=0;i<cards.length;i++){ cards[i].classList.remove('selected'); }
+        card.classList.add('selected');
+        startBtn.disabled = false;
+      });
+      fighterGrid.appendChild(card);
+    });
+  }
+
+  function goToSelect(){
+    document.getElementById('screen-result').classList.add('hidden');
+    document.getElementById('screen-game').classList.add('hidden');
+    document.getElementById('screen-select').classList.remove('hidden');
+    renderSelectScreen();
+  }
+
   // ---- session lifecycle ----
   function pickMonsters(){
-    var pool = MONSTER_POOL.slice();
+    var pool = MONSTER_POOL.filter(function(m){
+      return !S.playerFighter || m.name !== S.playerFighter.name;
+    });
     for(var i=pool.length-1;i>0;i--){
       var j = Math.floor(Math.random()*(i+1));
       var t=pool[i]; pool[i]=pool[j]; pool[j]=t;
@@ -451,6 +600,7 @@
   }
 
   function newSession(){
+    if(!S.playerFighter) return; // must pick a fighter first
     S.level = persist.level || 1;
     S.correctStreak = 0; S.wrongStreak = 0;
     S.dueQueue = [];
@@ -471,8 +621,10 @@
     });
     persist.pendingReview = [];
 
+    document.getElementById('screen-select').classList.add('hidden');
     document.getElementById('screen-result').classList.add('hidden');
     document.getElementById('screen-game').classList.remove('hidden');
+    renderPlayer();
     renderMonster();
     nextQuestion();
   }
@@ -549,6 +701,10 @@
     renderWeaknessList();
     document.getElementById('parentOverlay').classList.remove('hidden');
   });
+  document.getElementById('gearBtnSelect').addEventListener('click', function(){
+    renderWeaknessList();
+    document.getElementById('parentOverlay').classList.remove('hidden');
+  });
   document.getElementById('parentLinkBtn').addEventListener('click', function(){
     renderWeaknessList();
     document.getElementById('parentOverlay').classList.remove('hidden');
@@ -558,7 +714,8 @@
   });
   document.getElementById('exportBtn').addEventListener('click', exportLog);
   document.getElementById('resetBtn').addEventListener('click', resetData);
-  document.getElementById('retryBtn').addEventListener('click', newSession);
+  document.getElementById('retryBtn').addEventListener('click', goToSelect);
+  document.getElementById('startBtn').addEventListener('click', newSession);
 
   document.addEventListener('keydown', function(e){
     if(e.key>='0' && e.key<='9') onKey(e.key);
@@ -567,11 +724,11 @@
   });
 
   buildKeypad();
-  newSession();
+  goToSelect();
 
   // debug hook (harmless in normal use; lets developers inspect state via console)
   if(typeof window!=='undefined'){
-    window.__mb_debug = { S:S, persist:persist, onKey:onKey, newSession:newSession };
+    window.__mb_debug = { S:S, persist:persist, onKey:onKey, newSession:newSession, goToSelect:goToSelect, MONSTER_POOL:MONSTER_POOL };
   }
 })();
 </script>
