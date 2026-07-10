@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="算数バトル">
-<title>算数バトル</title>
+<meta name="apple-mobile-web-app-title" content="けいさんバトル図鑑">
+<title>けいさんバトル図鑑</title>
 <style>
   :root{
     --bg1:#1b1035; --bg2:#3a1668; --card:#2a1550; --accent:#ff7b3d; --accent2:#ffd23d;
@@ -26,45 +26,48 @@
   }
   .screen{flex:1; display:flex; flex-direction:column; padding:14px; min-height:0;}
   .hidden{display:none !important;}
+  button{font-family:inherit;}
 
   /* ---- top bar ---- */
-  .topbar{display:flex; align-items:center; justify-content:space-between; font-size:14px; opacity:.9; padding:2px 4px 8px;}
+  .topbar{display:flex; align-items:center; justify-content:space-between; font-size:14px; opacity:.9; padding:2px 4px 8px; min-height:30px;}
   .lvbadge{background:var(--accent); padding:3px 10px; border-radius:20px; font-weight:bold;}
-  .streak{color:var(--accent2); font-weight:bold;}
-  .gear{background:none; border:none; color:#fff; font-size:20px; opacity:.7;}
+  .combotext{color:var(--accent2); font-weight:bold; font-size:13px;}
+  .homelink{background:none; border:none; color:#ffffffaa; font-size:12px; text-decoration:underline; padding:8px;}
 
-  /* ---- character select screen ---- */
-  .selecttitle{font-size:21px; font-weight:bold; text-align:center; margin:8px 0 14px;}
+  /* ---- character select / zukan screen ---- */
+  .selecttitle{font-size:19px; font-weight:bold; text-align:center; margin:4px 0 10px;}
+  .zukanprogress{font-size:12px; text-align:center; opacity:.75; margin-bottom:8px;}
   .fightergrid{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:9px;
     overflow-y:auto; flex:1; align-content:start; padding-bottom:8px;
   }
   .fightercard{
-    background:#ffffff12; border:2px solid transparent; border-radius:16px; padding:14px 4px 10px;
-    display:flex; flex-direction:column; align-items:center; gap:4px; color:#fff;
+    background:#ffffff12; border:2px solid transparent; border-radius:16px; padding:10px 4px 8px;
+    display:flex; flex-direction:column; align-items:center; gap:3px; color:#fff; min-height:44px;
   }
-  .fightercard .fcemoji{font-size:38px;}
-  .fightercard .fcname{font-size:11px; opacity:.85; text-align:center;}
+  .fightercard .fcart{font-size:34px; line-height:1;}
+  .fightercard .fcname{font-size:10.5px; opacity:.85; text-align:center;}
   .fightercard.selected{border-color:var(--accent2); background:#ffffff26; transform:scale(1.04);}
+  .fightercard.locked{opacity:.45; filter:grayscale(1);}
   .fightercard:active{transform:scale(.96);}
   #startBtn:disabled{opacity:.35;}
 
   /* ---- battle arena (player vs enemy) ---- */
   .arena{
-    flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
-    gap:6px; padding:6px 2px 10px;
+    flex:0 0 auto; display:flex; align-items:flex-start; justify-content:space-between;
+    gap:6px; padding:4px 2px 8px;
   }
   .fighterside{display:flex; flex-direction:column; align-items:center; flex:1 1 0; min-width:0;}
   .fightername{
-    font-size:12px; opacity:.85; margin-bottom:4px; text-align:center;
+    font-size:12px; opacity:.85; margin-bottom:2px; text-align:center;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
   }
-  .fighter{font-size:56px; line-height:1; display:inline-block;}
-  .fighter.hit{animation:shake .35s;}
-  .fighter.dead{animation:poof .4s forwards;}
-  .fighter.attack{animation:lunge .45s ease-out;}
-  .fighter.fumble{animation:wobble .4s ease-out;}
-  .fighter.dodge{animation:dodge .35s ease-out;}
+  .fighterart{font-size:52px; line-height:1; display:inline-block;}
+  .fighterart img{width:56px; height:56px; object-fit:contain; display:block;}
+  .fighterart.hit{animation:shake .35s;}
+  .fighterart.dead{animation:poof .4s forwards;}
+  .fighterart.attack{animation:lunge .45s ease-out;}
+  .fighterart.enemyattack{animation:lungeLeft .45s ease-out;}
   @keyframes shake{
     0%,100%{transform:translateX(0) scale(1);}
     20%{transform:translateX(-10px) scale(1.05);}
@@ -79,42 +82,35 @@
     60%{transform:translateX(-6px) scale(1.02);}
     100%{transform:translateX(0) scale(1);}
   }
-  @keyframes wobble{
-    0%,100%{transform:rotate(0deg) translateY(0);}
-    25%{transform:rotate(-10deg) translateY(2px);}
-    50%{transform:rotate(0deg);}
-    75%{transform:rotate(10deg) translateY(2px);}
+  @keyframes lungeLeft{
+    0%{transform:translateX(0) scale(1);}
+    35%{transform:translateX(-20px) scale(1.1) rotate(6deg);}
+    60%{transform:translateX(6px) scale(1.02);}
+    100%{transform:translateX(0) scale(1);}
   }
-  @keyframes dodge{
-    0%,100%{transform:translateX(0);}
-    40%{transform:translateX(16px);}
-    70%{transform:translateX(-5px);}
-  }
-  .vsdivider{font-size:16px; opacity:.5; padding:0 2px; flex:0 0 auto;}
-  .hpwrap{width:100%; max-width:150px; margin-top:6px;}
+  .vsdivider{font-size:16px; opacity:.5; padding:0 2px; flex:0 0 auto; margin-top:16px;}
+  .hpwrap{width:100%; max-width:150px; margin-top:5px;}
+  .hplabel{font-size:9px; opacity:.6; display:flex; justify-content:space-between;}
   .hpbar-bg{background:#00000055; border-radius:10px; height:11px; overflow:hidden; border:2px solid #ffffff33;}
-  .hpbar-fill{background:linear-gradient(90deg,#ff5d5d,#ffb03d); height:100%; transition:width .3s;}
+  .hpbar-fill{height:100%; transition:width .3s;}
+  .hpbar-fill.playerfill{background:linear-gradient(90deg,#4a86e8,#68dfa9);}
+  .hpbar-fill.enemyfill{background:linear-gradient(90deg,#ff5d5d,#ffb03d);}
   .hptext{font-size:10px; text-align:right; opacity:.7; margin-top:2px;}
-  .monsterdots{display:flex; gap:6px; margin-top:6px; justify-content:center;}
+  .monsterdots{display:flex; gap:6px; margin-top:5px; justify-content:center;}
   .mdot{width:9px; height:9px; border-radius:50%; background:#ffffff33;}
   .mdot.done{background:var(--accent2);}
   .mdot.cur{background:var(--accent);}
 
   /* ---- question ---- */
   .qcard{
-    background:var(--card); border-radius:22px; padding:18px 10px; margin:8px 0;
+    background:var(--card); border-radius:22px; padding:16px 10px; margin:6px 0;
     text-align:center; box-shadow:0 6px 18px #00000040; flex:0 0 auto;
   }
-  .qtext{font-size:44px; font-weight:bold; letter-spacing:2px;}
-  .answerbox{
-    margin-top:10px; font-size:34px; font-weight:bold; min-height:46px;
-    background:#00000030; border-radius:14px; padding:6px; letter-spacing:4px;
-    color:var(--accent2);
-  }
+  .qtext{font-size:40px; font-weight:bold; letter-spacing:2px;}
   .feedback{
-    position:absolute; top:44%; left:50%; transform:translate(-50%,-50%) scale(.6);
-    font-size:32px; font-weight:bold; opacity:0; pointer-events:none; z-index:5;
-    text-shadow:0 2px 8px #000;
+    position:absolute; top:38%; left:50%; transform:translate(-50%,-50%) scale(.6);
+    font-size:28px; font-weight:bold; opacity:0; pointer-events:none; z-index:5;
+    text-shadow:0 2px 8px #000; white-space:nowrap;
   }
   .feedback.show{animation:pop .7s ease-out forwards;}
   @keyframes pop{
@@ -127,35 +123,39 @@
   .feedback.good{color:var(--good);}
   .feedback.bad{color:var(--bad);}
 
-  /* ---- keypad ---- */
-  .keypad{
-    margin-top:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  /* ---- 4-choice answer buttons ---- */
+  .choicegrid{
+    margin-top:auto; display:grid; grid-template-columns:1fr 1fr; gap:10px;
     padding-top:8px;
   }
-  .key{
-    background:#ffffff14; border:1px solid #ffffff22; color:#fff; font-size:26px; font-weight:bold;
-    border-radius:14px; padding:14px 0; transition:background .1s;
+  .choice{
+    background:#ffffff14; border:1px solid #ffffff26; color:#fff; font-size:28px; font-weight:bold;
+    border-radius:16px; min-height:64px; transition:background .15s, transform .1s;
   }
-  .key:active{background:var(--accent); transform:scale(.96);}
-  .key.wide{grid-column:span 1;}
-  .key.submit{background:var(--good); color:#062;}
-  .key.submit:active{background:#2fc474;}
-  .key.del{background:#ffffff10; font-size:20px;}
+  .choice:active{transform:scale(.96);}
+  .choice.correct{background:var(--good); color:#063; border-color:var(--good);}
+  .choice.wrong{background:var(--bad); color:#fff; border-color:var(--bad);}
+  .choice:disabled{opacity:.9;}
 
-  /* ---- result screen ---- */
-  .resultwrap{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:10px;}
-  .resulttitle{font-size:30px; font-weight:bold; color:var(--accent2);}
-  .statgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:320px; margin:10px 0;}
+  /* ---- reveal-answer overlay (shown 3s after a wrong answer) ---- */
+  .revealcard{text-align:center;}
+  .revealcard .rlabel{font-size:14px; opacity:.8;}
+  .revealcard .rvalue{font-size:52px; font-weight:bold; color:var(--accent2); margin:6px 0;}
+
+  /* ---- result / action overlay screens ---- */
+  .resultwrap{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:8px;}
+  .resulttitle{font-size:28px; font-weight:bold; color:var(--accent2);}
+  .statgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:320px; margin:8px 0;}
   .stat{background:var(--card); border-radius:14px; padding:10px; }
   .stat .num{font-size:22px; font-weight:bold; color:var(--accent2);}
   .stat .lbl{font-size:11px; opacity:.7;}
   .bigbtn{
     background:var(--accent); border:none; color:#fff; font-size:18px; font-weight:bold;
-    padding:14px 28px; border-radius:30px; margin-top:6px; width:100%; max-width:320px;
+    padding:14px 28px; border-radius:30px; margin-top:6px; width:100%; max-width:320px; min-height:48px;
   }
   .linkbtn{background:none; border:none; color:#ffffffaa; text-decoration:underline; font-size:13px; margin-top:14px;}
 
-  /* ---- parent panel ---- */
+  /* ---- generic overlay ---- */
   .overlay{
     position:fixed; inset:0; background:#000000cc; display:flex; align-items:center; justify-content:center; z-index:20; padding:20px;
   }
@@ -165,10 +165,12 @@
   .panel td{padding:4px 2px; border-bottom:1px solid #ffffff1a;}
   .panelbtns{display:flex; flex-direction:column; gap:8px; margin-top:14px;}
   .panelbtns button{
-    background:#ffffff14; border:1px solid #ffffff30; color:#fff; padding:10px; border-radius:10px; font-size:14px;
+    background:#ffffff14; border:1px solid #ffffff30; color:#fff; padding:12px; border-radius:10px; font-size:14px; min-height:44px;
   }
   .panelbtns button.danger{color:var(--bad); border-color:#ff5d5d55;}
-  .closepanel{margin-top:10px; width:100%; background:none; border:none; color:#aaa; font-size:14px; padding:8px;}
+  .closepanel{margin-top:10px; width:100%; background:none; border:none; color:#aaa; font-size:14px; padding:10px; min-height:44px;}
+  .actiontitle{font-size:20px; font-weight:bold; text-align:center;}
+  .copytoast{font-size:12px; color:var(--good); text-align:center; margin-top:6px; min-height:16px;}
 </style>
 </head>
 <body>
@@ -176,32 +178,38 @@
 <div id="screen-select" class="screen">
   <div class="topbar">
     <span></span>
-    <span class="selecttitle" style="margin:0;">キャラをえらぼう！</span>
-    <button class="gear" id="gearBtnSelect">⚙</button>
+    <span class="selecttitle" style="margin:0;">あいぼうをえらぼう！</span>
+    <span></span>
   </div>
+  <div class="zukanprogress" id="zukanProgress">ずかん 3/12</div>
   <div class="fightergrid" id="fighterGrid"></div>
   <button class="bigbtn" id="startBtn" disabled>たたかう！</button>
+  <button class="homelink" id="gearBtnSelect" style="align-self:center;">おうちのひと</button>
 </div>
 
-<div id="screen-game" class="screen hidden">
+<div id="screen-game" class="screen hidden" style="position:relative;">
   <div class="topbar">
     <span class="lvbadge" id="lvBadge">Lv.1</span>
-    <span class="streak" id="streakText"></span>
-    <button class="gear" id="gearBtn">⚙</button>
+    <span class="combotext" id="comboText"></span>
+    <button class="homelink" id="gearBtn">おうちのひと</button>
   </div>
 
   <div class="arena">
     <div class="fighterside">
       <div class="fightername" id="playerName">-</div>
-      <div class="fighter" id="playerEmoji">🙂</div>
+      <div class="fighterart" id="playerArt">🙂</div>
+      <div class="hpwrap">
+        <div class="hplabel"><span>HP</span><span id="playerHpNum">100/100</span></div>
+        <div class="hpbar-bg"><div class="hpbar-fill playerfill" id="playerHpFill" style="width:100%"></div></div>
+      </div>
     </div>
     <div class="vsdivider">⚔️</div>
     <div class="fighterside">
       <div class="fightername" id="monsterName">-</div>
-      <div class="fighter" id="monsterEmoji">🐲</div>
+      <div class="fighterart" id="monsterArt">🦖</div>
       <div class="hpwrap">
-        <div class="hpbar-bg"><div class="hpbar-fill" id="hpFill" style="width:100%"></div></div>
-        <div class="hptext" id="hpText">30/30</div>
+        <div class="hplabel"><span>つよさ</span><span id="hpText">30/30</span></div>
+        <div class="hpbar-bg"><div class="hpbar-fill enemyfill" id="hpFill" style="width:100%"></div></div>
       </div>
       <div class="monsterdots" id="monsterDots"></div>
     </div>
@@ -209,36 +217,55 @@
 
   <div class="qcard" style="position:relative;">
     <div class="qtext" id="qText">?</div>
-    <div class="answerbox" id="answerBox">&nbsp;</div>
     <div class="feedback" id="feedback"></div>
   </div>
 
-  <div class="keypad" id="keypad"></div>
+  <div class="choicegrid" id="choiceGrid"></div>
+</div>
+
+<div id="revealOverlay" class="overlay hidden">
+  <div class="panel revealcard">
+    <div class="rlabel">せいかいは</div>
+    <div class="rvalue" id="revealAnswer">0</div>
+    <div class="rlabel">だよ！</div>
+  </div>
+</div>
+
+<div id="actionOverlay" class="overlay hidden">
+  <div class="panel" style="text-align:center;">
+    <div class="actiontitle" id="actionTitle">タイトル</div>
+    <div style="font-size:44px; margin:14px 0;" id="actionBody">🏆</div>
+    <button class="bigbtn" id="actionBtn1">ボタン1</button>
+    <button class="bigbtn" id="actionBtn2" style="background:#ffffff20; margin-top:8px;">ボタン2</button>
+  </div>
 </div>
 
 <div id="screen-result" class="screen hidden">
   <div class="resultwrap">
     <div class="resulttitle" id="resultTitle">クリア！</div>
-    <div style="font-size:50px;" id="resultEmoji">🏆</div>
+    <div style="font-size:46px;" id="resultEmoji">🏆</div>
     <div class="statgrid">
       <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">といた もんだい</div></div>
       <div class="stat"><div class="num" id="statCorrect">0</div><div class="lbl">せいかい</div></div>
       <div class="stat"><div class="num" id="statRate">0%</div><div class="lbl">せいかいりつ</div></div>
       <div class="stat"><div class="num" id="statLv">1</div><div class="lbl">とうたつレベル</div></div>
     </div>
-    <button class="bigbtn" id="retryBtn">もういちど キャラをえらぶ</button>
-    <button class="linkbtn" id="parentLinkBtn">保護者の方はこちら</button>
+    <div style="font-size:12px; opacity:.75;" id="statZukan">ずかん 3/12</div>
+    <button class="bigbtn" id="retryBtn">もういちど あいぼうをえらぶ</button>
+    <button class="linkbtn" id="parentLinkBtn">おうちのひと</button>
   </div>
 </div>
 
 <div id="parentOverlay" class="overlay hidden">
   <div class="panel">
-    <h3>保護者用メニュー</h3>
+    <h3>おうちのひと</h3>
     <div id="weaknessList" style="font-size:13px; opacity:.85;">読み込み中…</div>
     <div class="panelbtns">
+      <button id="copyBtn">誤答ログをコピーする（JSON）</button>
       <button id="exportBtn">誤答ログを書き出す（JSON）</button>
       <button id="resetBtn" class="danger">記録をリセットする</button>
     </div>
+    <div class="copytoast" id="copyToast"></div>
     <button class="closepanel" id="closePanelBtn">とじる</button>
   </div>
 </div>
@@ -247,15 +274,35 @@
 (function(){
   "use strict";
 
-  var LS_KEY = "mathBattle_v1";
+  var LS_KEY = "mathBattle_v2";
+
+  var CHARACTERS = [
+    {id:'tyranno',  name:'ティラノサウルス', emoji:'🦖'},
+    {id:'lion',     name:'ライオン',         emoji:'🦁'},
+    {id:'eagle',    name:'ワシ',             emoji:'🦅'},
+    {id:'tricera',  name:'トリケラトプス',   emoji:'🦏'},
+    {id:'ptera',    name:'プテラノドン',     emoji:'🦇'},
+    {id:'spino',    name:'スピノサウルス',   emoji:'🐊'},
+    {id:'brachio',  name:'ブラキオサウルス', emoji:'🦕'},
+    {id:'mosa',     name:'モササウルス',     emoji:'🐳'},
+    {id:'elephant', name:'ゾウ',             emoji:'🐘'},
+    {id:'gorilla',  name:'ゴリラ',           emoji:'🦍'},
+    {id:'shark',    name:'ホホジロザメ',     emoji:'🦈'},
+    {id:'hippo',    name:'カバ',             emoji:'🦛'}
+  ];
+  var STARTERS = ['tyranno','lion','eagle'];
+  var CHAR_BY_ID = {};
+  CHARACTERS.forEach(function(c){ CHAR_BY_ID[c.id] = c; });
 
   function loadState(){
     var raw = localStorage.getItem(LS_KEY);
-    var def = { level:1, weakness:{}, pendingReview:[], wrongLog:[] };
+    var def = { level:1, weakness:{}, pendingReview:[], wrongLog:[], unlocked: STARTERS.slice() };
     if(!raw) return def;
     try{
       var parsed = JSON.parse(raw);
-      return Object.assign(def, parsed);
+      var merged = Object.assign(def, parsed);
+      if(!merged.unlocked || !merged.unlocked.length) merged.unlocked = STARTERS.slice();
+      return merged;
     }catch(e){ return def; }
   }
   function saveState(){
@@ -263,41 +310,41 @@
       level: persist.level,
       weakness: persist.weakness,
       pendingReview: persist.pendingReview,
-      wrongLog: persist.wrongLog.slice(-500) // avoid unbounded growth
+      wrongLog: persist.wrongLog.slice(-500),
+      unlocked: persist.unlocked
     }));
   }
 
   var persist = loadState();
 
-  var MONSTER_POOL = [
-    {name:"ちびドラ", emoji:"🐲"}, {name:"いわとげ", emoji:"🦖"},
-    {name:"うみうねり", emoji:"🐙"}, {name:"すなさそり", emoji:"🦂"},
-    {name:"かぜおおかみ", emoji:"🐺"}, {name:"ほのおとり", emoji:"🦅"},
-    {name:"つのおに", emoji:"👹"}, {name:"いかりめん", emoji:"👺"},
-    {name:"こおりぎつね", emoji:"🦊"}, {name:"らいじゅう", emoji:"🐯"}
-  ];
-  var MONSTER_HP = [30, 40, 55];
+  var ENEMY_HP_BY_SLOT  = [35, 45, 60];
+  var ENEMY_ATK_BY_SLOT = [7, 10, 13];
+  var PLAYER_MAX_HP = 100;
+  var MAX_LEVEL = 8;
+  var QUESTION_CAP = 40;
 
   // ---- session (in-memory) state ----
   var S = {
     level: persist.level || 1,
     correctStreak: 0,
     wrongStreak: 0,
-    dueQueue: [],           // {a,b,op,key,turnsLeft}
-    sessionWrong: [],       // [{a,b,op,key}] this session, most recent last
-    poolCache: {},          // level -> array of {a,b,op}
-    playerFighter: null,    // {name,emoji} chosen on the select screen
-    monsters: [],           // this session's 3 enemy monsters
-    monsterIndex: 0,
+    comboStreak: 0,
+    dueQueue: [],
+    sessionWrong: [],
+    poolCache: {},
+    playerFighter: null,
+    playerHp: PLAYER_MAX_HP,
+    playerHpMax: PLAYER_MAX_HP,
+    enemyQueue: [],
+    enemyIndex: 0,
     enemyHp: 0,
     enemyHpMax: 0,
+    enemyAtk: 0,
+    winsThisSession: 0,
     totalQuestions: 0,
     correctCount: 0,
-    monstersDefeated: 0,
-    current: null,          // current question {a,b,op,key, fromDue}
-    answer: "",
-    locked: false,
-    QUESTION_CAP: 30
+    current: null,
+    locked: false
   };
 
   function key(a,b,op){ return a+op+b; }
@@ -321,12 +368,22 @@
     } else if(level===5){
       for(a=10;a<=89;a++) for(b=10;b<=89;b++) if((a%10+b%10)<=9 && a+b<=99) push(a,b,'+');
       for(a=20;a<=99;a++) for(b=10;b<=89;b++) if(a-b>=1 && (a%10)>=(b%10)) push(a,b,'-');
-    } else {
+    } else if(level===6){
       for(a=10;a<=89;a++) for(b=10;b<=89;b++) if((a%10+b%10)>=10 && a+b<=99) push(a,b,'+');
       for(a=21;a<=99;a++) for(b=10;b<=89;b++) if(a-b>=1 && (a%10)<(b%10)) push(a,b,'-');
+    } else if(level===7){
+      for(a=1;a<=5;a++) for(b=1;b<=9;b++) push(a,b,'×');
+    } else {
+      for(a=1;a<=9;a++) for(b=1;b<=9;b++) push(a,b,'×');
     }
     S.poolCache[level] = pool;
     return pool;
+  }
+
+  function computeAnswer(q){
+    if(q.op==='+') return q.a+q.b;
+    if(q.op==='-') return q.a-q.b;
+    return q.a*q.b;
   }
 
   function pickWeighted(level){
@@ -348,27 +405,47 @@
   }
 
   // Schedule (or reschedule) a question for spaced-repetition review.
-  // Dedupes by key so the same problem never stacks multiple queue entries
-  // (that stacking was causing the same missed question to reappear on
-  // almost every turn). Only schedules an immediate "直後" reappearance
-  // when this is a fresh miss (not already a due-queue retry) — a repeat
-  // miss on a retry just pushes the "数問後" slot further out instead of
-  // looping the same question back-to-back.
+  // "直後" (immediate) only for a fresh miss; "3問後" fixed delay per spec.
+  // Dedupes by key so the same problem never stacks multiple queue entries.
   function scheduleReview(a,b,op,k,immediate){
     S.dueQueue = S.dueQueue.filter(function(it){ return it.key!==k; });
     if(immediate){
       S.dueQueue.push({a:a,b:b,op:op,key:k,turnsLeft:1});
     }
-    S.dueQueue.push({a:a,b:b,op:op,key:k,turnsLeft:5+Math.floor(Math.random()*4)});
+    S.dueQueue.push({a:a,b:b,op:op,key:k,turnsLeft:3});
     if(S.dueQueue.length>8) S.dueQueue.splice(0, S.dueQueue.length-8);
   }
 
-  function nextQuestion(){
-    // decrement due queue, check for something ready
-    var ready = null;
-    for(var i=0;i<S.dueQueue.length;i++){
-      S.dueQueue[i].turnsLeft -= 1;
+  // Build 4 distinct non-negative answer choices, including the correct one.
+  function makeChoices(correct){
+    var set = [correct];
+    var offsets = [1,-1,2,-2,3,-3,4,-4,5,-5,10,-10,6,-6];
+    // shuffle offsets
+    for(var i=offsets.length-1;i>0;i--){
+      var j = Math.floor(Math.random()*(i+1));
+      var t=offsets[i]; offsets[i]=offsets[j]; offsets[j]=t;
     }
+    for(i=0;i<offsets.length && set.length<4;i++){
+      var v = correct + offsets[i];
+      if(v>=0 && set.indexOf(v)===-1) set.push(v);
+    }
+    var guard=0;
+    while(set.length<4 && guard<50){
+      var rv = Math.floor(Math.random()*(correct+25));
+      if(rv>=0 && set.indexOf(rv)===-1) set.push(rv);
+      guard++;
+    }
+    // shuffle final set
+    for(i=set.length-1;i>0;i--){
+      var j2 = Math.floor(Math.random()*(i+1));
+      var t2=set[i]; set[i]=set[j2]; set[j2]=t2;
+    }
+    return set;
+  }
+
+  function nextQuestion(){
+    var ready = null;
+    for(var i=0;i<S.dueQueue.length;i++){ S.dueQueue[i].turnsLeft -= 1; }
     for(i=0;i<S.dueQueue.length;i++){
       if(S.dueQueue[i].turnsLeft<=0){ ready = S.dueQueue.splice(i,1)[0]; break; }
     }
@@ -376,9 +453,6 @@
     if(ready){
       q = {a:ready.a, b:ready.b, op:ready.op, key:ready.key, fromDue:true};
     } else {
-      // Avoid immediately re-asking the question that was just answered —
-      // weighted picks can otherwise collide with a due-queue reappearance
-      // and make the same problem show up two turns in a row by chance.
       var lastKey = S.current ? S.current.key : null;
       var picked, pickedKey, attempts = 0;
       do {
@@ -388,45 +462,89 @@
       } while(pickedKey === lastKey && attempts < 6);
       q = {a:picked.a, b:picked.b, op:picked.op, key:pickedKey, fromDue:false};
     }
+    q.answer = computeAnswer(q);
+    q.choices = makeChoices(q.answer);
     S.current = q;
-    S.answer = "";
+    S.locked = false;
     renderQuestion();
   }
 
-  // ---- rendering ----
+  // ---- DOM refs ----
   var qText = document.getElementById('qText');
-  var answerBox = document.getElementById('answerBox');
   var lvBadge = document.getElementById('lvBadge');
-  var streakText = document.getElementById('streakText');
+  var comboText = document.getElementById('comboText');
   var playerName = document.getElementById('playerName');
-  var playerEmoji = document.getElementById('playerEmoji');
+  var playerArt = document.getElementById('playerArt');
+  var playerHpFill = document.getElementById('playerHpFill');
+  var playerHpNum = document.getElementById('playerHpNum');
   var monsterName = document.getElementById('monsterName');
-  var monsterEmoji = document.getElementById('monsterEmoji');
+  var monsterArt = document.getElementById('monsterArt');
   var hpFill = document.getElementById('hpFill');
   var hpText = document.getElementById('hpText');
   var monsterDots = document.getElementById('monsterDots');
   var feedback = document.getElementById('feedback');
-  var keypad = document.getElementById('keypad');
+  var choiceGrid = document.getElementById('choiceGrid');
   var fighterGrid = document.getElementById('fighterGrid');
   var startBtn = document.getElementById('startBtn');
+  var zukanProgress = document.getElementById('zukanProgress');
+  var revealOverlay = document.getElementById('revealOverlay');
+  var revealAnswer = document.getElementById('revealAnswer');
+  var actionOverlay = document.getElementById('actionOverlay');
+  var actionTitle = document.getElementById('actionTitle');
+  var actionBody = document.getElementById('actionBody');
+  var actionBtn1 = document.getElementById('actionBtn1');
+  var actionBtn2 = document.getElementById('actionBtn2');
 
-  // Re-trigger a CSS animation on an element even if the class is already
-  // present, by removing it, forcing a reflow, then re-adding it.
   function pulse(el, cls){
     el.classList.remove(cls);
     void el.offsetWidth;
     el.classList.add(cls);
   }
 
-  function renderQuestion(){
-    var opSym = S.current.op === '+' ? '＋' : 'ー';
-    qText.textContent = S.current.a + ' ' + opSym + ' ' + S.current.b + ' = ';
-    answerBox.textContent = S.answer.length ? S.answer : ' ';
-    lvBadge.textContent = 'Lv.' + S.level;
-    streakText.textContent = S.correctStreak>0 ? ('🔥x'+S.correctStreak) : '';
+  function setArt(el, character){
+    // Single-folder deployment: images/<id>.png if present, else emoji fallback.
+    el.innerHTML = '';
+    var img = document.createElement('img');
+    img.src = 'images/' + character.id + '.png';
+    img.alt = character.name;
+    var fallback = document.createElement('span');
+    fallback.textContent = character.emoji;
+    fallback.style.display = 'none';
+    img.addEventListener('error', function(){
+      img.style.display = 'none';
+      fallback.style.display = 'inline';
+    });
+    el.appendChild(img);
+    el.appendChild(fallback);
   }
 
-  function updateHpBar(){
+  function renderQuestion(){
+    var opSym = S.current.op === '+' ? '＋' : (S.current.op === '-' ? 'ー' : '×');
+    qText.textContent = S.current.a + ' ' + opSym + ' ' + S.current.b + ' = ';
+    lvBadge.textContent = 'Lv.' + S.level;
+    comboText.textContent = S.comboStreak>=2 ? ('🔥コンボx'+comboMultiplier(S.comboStreak)) : '';
+    renderChoices();
+  }
+
+  function renderChoices(){
+    choiceGrid.innerHTML = '';
+    S.current.choices.forEach(function(val){
+      var btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.type = 'button';
+      btn.textContent = String(val);
+      btn.disabled = false;
+      btn.addEventListener('click', function(){ chooseAnswer(val, btn); });
+      choiceGrid.appendChild(btn);
+    });
+  }
+
+  function updatePlayerHpBar(){
+    var pct = Math.max(0, Math.round(100*S.playerHp/S.playerHpMax));
+    playerHpFill.style.width = pct + '%';
+    playerHpNum.textContent = Math.max(0,S.playerHp) + '/' + S.playerHpMax;
+  }
+  function updateEnemyHpBar(){
     var pct = Math.max(0, Math.round(100*S.enemyHp/S.enemyHpMax));
     hpFill.style.width = pct + '%';
     hpText.textContent = Math.max(0,S.enemyHp) + '/' + S.enemyHpMax;
@@ -434,122 +552,179 @@
 
   function renderPlayer(){
     playerName.textContent = S.playerFighter.name;
-    playerEmoji.textContent = S.playerFighter.emoji;
-    playerEmoji.classList.remove('attack','fumble');
+    setArt(playerArt, S.playerFighter);
+    playerArt.classList.remove('attack','hit');
+    updatePlayerHpBar();
   }
 
-  function renderMonster(){
-    var m = S.monsters[S.monsterIndex];
+  function renderEnemy(){
+    var m = S.enemyQueue[S.enemyIndex];
     monsterName.textContent = m.name;
-    monsterEmoji.textContent = m.emoji;
-    monsterEmoji.classList.remove('hit','dead','dodge');
-    updateHpBar();
+    setArt(monsterArt, m);
+    monsterArt.classList.remove('hit','dead','enemyattack');
+    updateEnemyHpBar();
     monsterDots.innerHTML = '';
-    for(var i=0;i<S.monsters.length;i++){
+    for(var i=0;i<S.enemyQueue.length;i++){
       var d = document.createElement('div');
-      d.className = 'mdot' + (i<S.monsterIndex ? ' done' : (i===S.monsterIndex ? ' cur' : ''));
+      d.className = 'mdot' + (i<S.enemyIndex ? ' done' : (i===S.enemyIndex ? ' cur' : ''));
       monsterDots.appendChild(d);
     }
   }
 
-  function buildKeypad(){
-    keypad.innerHTML = '';
-    var layout = ['1','2','3','4','5','6','7','8','9','del','0','ok'];
-    layout.forEach(function(k){
-      var btn = document.createElement('button');
-      btn.className = 'key';
-      if(k==='del'){ btn.className+=' del'; btn.textContent='⌫'; }
-      else if(k==='ok'){ btn.className+=' submit'; btn.textContent='けってい'; }
-      else { btn.textContent = k; }
-      btn.addEventListener('click', function(){ onKey(k); });
-      keypad.appendChild(btn);
-    });
+  function comboMultiplier(streak){
+    if(streak>=4) return 2;
+    if(streak>=2) return 1.5;
+    return 1;
   }
 
-  function onKey(k){
-    if(S.locked) return;
-    if(k==='del'){ S.answer = S.answer.slice(0,-1); renderQuestion(); return; }
-    if(k==='ok'){ submitAnswer(); return; }
-    if(S.answer.length>=3) return;
-    S.answer += k;
-    renderQuestion();
-  }
-
-  function showFeedback(good){
-    feedback.textContent = good ? 'せいかい！' : 'はずれ！';
-    feedback.className = 'feedback show ' + (good?'good':'bad');
+  function showFeedback(text, cls){
+    feedback.textContent = text;
+    feedback.className = 'feedback show ' + cls;
     setTimeout(function(){ feedback.className='feedback'; }, 700);
   }
 
-  function submitAnswer(){
-    if(S.locked || S.answer==='') return;
+  // ---- answering ----
+  function chooseAnswer(val, btnEl){
+    if(S.locked) return;
     S.locked = true;
-    var correctAns = S.current.op==='+' ? S.current.a+S.current.b : S.current.a-S.current.b;
-    var userAns = parseInt(S.answer,10);
-    var good = userAns === correctAns;
+    var correctAns = S.current.answer;
+    var good = (val === correctAns);
     S.totalQuestions++;
+
+    var buttons = choiceGrid.querySelectorAll('.choice');
 
     if(good){
       S.correctCount++;
-      S.correctStreak++; S.wrongStreak = 0;
+      S.correctStreak++; S.wrongStreak = 0; S.comboStreak++;
       persist.weakness[S.current.key] = Math.max((persist.weakness[S.current.key]||0)-1, 0);
 
-      // your fighter attacks the enemy
-      var dmg = 8 + Math.floor(Math.random()*5);
+      var mult = comboMultiplier(S.comboStreak);
+      var dmg = Math.max(1, Math.round((8 + Math.floor(Math.random()*6)) * mult));
       S.enemyHp -= dmg;
-      pulse(playerEmoji, 'attack');
-      pulse(monsterEmoji, 'hit');
-      showFeedback(true);
+      pulse(playerArt, 'attack');
+      pulse(monsterArt, 'hit');
+      showFeedback(mult>1 ? ('せいかい！コンボx'+mult) : 'せいかい！', 'good');
+      if(btnEl){ btnEl.classList.add('correct'); }
 
-      if(S.correctStreak>=3){ S.level = Math.min(S.level+1,6); S.correctStreak=0; persist.level=S.level; }
+      if(S.correctStreak>=3){ S.level = Math.min(S.level+1,MAX_LEVEL); S.correctStreak=0; persist.level=S.level; }
+
+      saveState();
 
       if(S.enemyHp<=0){
-        S.monstersDefeated++;
-        pulse(monsterEmoji, 'dead');
-        updateHpBar();
-        saveState();
-        setTimeout(function(){
-          if(S.monsterIndex < S.monsters.length-1){
-            S.monsterIndex++;
-            S.enemyHpMax = MONSTER_HP[S.monsterIndex];
-            S.enemyHp = S.enemyHpMax;
-            renderMonster();
-            afterAnswerContinue();
-          } else {
-            showResult(true);
-          }
-        }, 550);
+        pulse(monsterArt, 'dead');
+        updateEnemyHpBar();
+        setTimeout(function(){ handleVictory(); }, 550);
         return;
       }
-      updateHpBar();
+      updateEnemyHpBar();
+      if(S.totalQuestions>=QUESTION_CAP){ setTimeout(function(){ showResult(false); }, 550); return; }
+      setTimeout(function(){ nextQuestion(); }, 550);
+
     } else {
-      S.wrongStreak++; S.correctStreak=0;
+      S.wrongStreak++; S.correctStreak=0; S.comboStreak=0;
       persist.weakness[S.current.key] = Math.min((persist.weakness[S.current.key]||0)+3, 30);
-      persist.wrongLog.push({t:Date.now(), a:S.current.a, b:S.current.b, op:S.current.op, ans:correctAns, user:userAns, level:S.level});
+      persist.wrongLog.push({t:Date.now(), a:S.current.a, b:S.current.b, op:S.current.op, ans:correctAns, user:val, level:S.level});
       S.sessionWrong.push({a:S.current.a,b:S.current.b,op:S.current.op,key:S.current.key});
-      // spaced repetition: soon (only for a fresh miss) + later
       scheduleReview(S.current.a, S.current.b, S.current.op, S.current.key, !S.current.fromDue);
-      pulse(playerEmoji, 'fumble');
-      pulse(monsterEmoji, 'dodge');
-      showFeedback(false);
+
+      var enemyDmg = Math.max(1, S.enemyAtk + Math.floor(Math.random()*5) - 2);
+      S.playerHp -= enemyDmg;
+      pulse(monsterArt, 'enemyattack');
+      pulse(playerArt, 'hit');
+      showFeedback('はずれ！', 'bad');
+      if(btnEl){ btnEl.classList.add('wrong'); }
+      for(var i=0;i<buttons.length;i++){
+        if(parseInt(buttons[i].textContent,10) === correctAns){ buttons[i].classList.add('correct'); }
+        buttons[i].disabled = true;
+      }
 
       if(S.wrongStreak>=2){ S.level = Math.max(S.level-1,1); S.wrongStreak=0; persist.level=S.level; }
-    }
 
-    saveState();
+      updatePlayerHpBar();
+      saveState();
 
-    if(S.totalQuestions>=S.QUESTION_CAP){
-      setTimeout(function(){ showResult(false); }, 550);
-      return;
+      revealAnswer.textContent = String(correctAns);
+      revealOverlay.classList.remove('hidden');
+      setTimeout(function(){
+        revealOverlay.classList.add('hidden');
+        if(S.playerHp<=0){
+          handleLoss();
+        } else if(S.totalQuestions>=QUESTION_CAP){
+          showResult(false);
+        } else {
+          nextQuestion();
+        }
+      }, 3000);
     }
-    afterAnswerContinue();
   }
 
-  function afterAnswerContinue(){
-    setTimeout(function(){
-      S.locked = false;
-      nextQuestion();
-    }, 550);
+  // ---- action overlay (victory choice / loss / champion) ----
+  function showAction(opts){
+    actionTitle.textContent = opts.title;
+    actionBody.textContent = opts.body;
+    actionBtn1.textContent = opts.btn1.label;
+    actionBtn1.onclick = opts.btn1.onClick;
+    if(opts.btn2){
+      actionBtn2.textContent = opts.btn2.label;
+      actionBtn2.onclick = opts.btn2.onClick;
+      actionBtn2.classList.remove('hidden');
+    } else {
+      actionBtn2.classList.add('hidden');
+    }
+    actionOverlay.classList.remove('hidden');
+  }
+  function hideAction(){
+    actionOverlay.classList.add('hidden');
+  }
+
+  function handleVictory(){
+    S.winsThisSession++;
+    var beaten = S.enemyQueue[S.enemyIndex];
+    var isNew = persist.unlocked.indexOf(beaten.id) === -1;
+    if(isNew){ persist.unlocked.push(beaten.id); saveState(); }
+
+    if(S.winsThisSession>=3){
+      showAction({
+        title: '🏆 今日のチャンピオン！ 🏆',
+        body: '３れんしょう！ すごい！',
+        btn1: { label:'けっかをみる', onClick: function(){ hideAction(); showResult(true); } }
+      });
+      return;
+    }
+    showAction({
+      title: 'かった！',
+      body: beaten.emoji + ' ' + (isNew ? 'なかまに なった！' : 'かった！'),
+      btn1: { label:'つぎのあいてへ', onClick: goNextEnemy },
+      btn2: { label:'ここでおわる', onClick: function(){ hideAction(); showResult(true); } }
+    });
+  }
+
+  function goNextEnemy(){
+    hideAction();
+    S.enemyIndex++;
+    var slot = S.enemyIndex;
+    S.enemyHpMax = ENEMY_HP_BY_SLOT[slot];
+    S.enemyHp = S.enemyHpMax;
+    S.enemyAtk = ENEMY_ATK_BY_SLOT[slot];
+    renderEnemy();
+    nextQuestion();
+  }
+
+  function handleLoss(){
+    showAction({
+      title: 'まけちゃった…',
+      body: '😵',
+      btn1: { label:'もういっかい！', onClick: retryAfterLoss }
+    });
+  }
+
+  function retryAfterLoss(){
+    hideAction();
+    S.playerHp = S.playerHpMax;
+    S.enemyHp = S.enemyHpMax;
+    updatePlayerHpBar();
+    updateEnemyHpBar();
+    nextQuestion();
   }
 
   // ---- character select ----
@@ -557,25 +732,29 @@
     fighterGrid.innerHTML = '';
     S.playerFighter = null;
     startBtn.disabled = true;
-    MONSTER_POOL.forEach(function(m){
+    zukanProgress.textContent = 'ずかん ' + persist.unlocked.length + '/' + CHARACTERS.length;
+    CHARACTERS.forEach(function(m){
+      var unlocked = persist.unlocked.indexOf(m.id) !== -1;
       var card = document.createElement('button');
-      card.className = 'fightercard';
+      card.className = 'fightercard' + (unlocked ? '' : ' locked');
       card.type = 'button';
-      var eDiv = document.createElement('div');
-      eDiv.className = 'fcemoji';
-      eDiv.textContent = m.emoji;
+      var artDiv = document.createElement('div');
+      artDiv.className = 'fcart';
+      artDiv.textContent = unlocked ? m.emoji : '？';
       var nDiv = document.createElement('div');
       nDiv.className = 'fcname';
-      nDiv.textContent = m.name;
-      card.appendChild(eDiv);
+      nDiv.textContent = unlocked ? m.name : '？？？';
+      card.appendChild(artDiv);
       card.appendChild(nDiv);
-      card.addEventListener('click', function(){
-        S.playerFighter = m;
-        var cards = fighterGrid.querySelectorAll('.fightercard');
-        for(var i=0;i<cards.length;i++){ cards[i].classList.remove('selected'); }
-        card.classList.add('selected');
-        startBtn.disabled = false;
-      });
+      if(unlocked){
+        card.addEventListener('click', function(){
+          S.playerFighter = m;
+          var cards = fighterGrid.querySelectorAll('.fightercard');
+          for(var i=0;i<cards.length;i++){ cards[i].classList.remove('selected'); }
+          card.classList.add('selected');
+          startBtn.disabled = false;
+        });
+      }
       fighterGrid.appendChild(card);
     });
   }
@@ -583,14 +762,15 @@
   function goToSelect(){
     document.getElementById('screen-result').classList.add('hidden');
     document.getElementById('screen-game').classList.add('hidden');
+    hideAction();
     document.getElementById('screen-select').classList.remove('hidden');
     renderSelectScreen();
   }
 
   // ---- session lifecycle ----
-  function pickMonsters(){
-    var pool = MONSTER_POOL.filter(function(m){
-      return !S.playerFighter || m.name !== S.playerFighter.name;
+  function pickEnemyQueue(){
+    var pool = CHARACTERS.filter(function(m){
+      return !S.playerFighter || m.id !== S.playerFighter.id;
     });
     for(var i=pool.length-1;i>0;i--){
       var j = Math.floor(Math.random()*(i+1));
@@ -600,21 +780,22 @@
   }
 
   function newSession(){
-    if(!S.playerFighter) return; // must pick a fighter first
+    if(!S.playerFighter) return;
     S.level = persist.level || 1;
-    S.correctStreak = 0; S.wrongStreak = 0;
+    S.correctStreak = 0; S.wrongStreak = 0; S.comboStreak = 0;
     S.dueQueue = [];
     S.sessionWrong = [];
-    S.monsters = pickMonsters();
-    S.monsterIndex = 0;
-    S.enemyHpMax = MONSTER_HP[0];
+    S.playerHp = PLAYER_MAX_HP; S.playerHpMax = PLAYER_MAX_HP;
+    S.enemyQueue = pickEnemyQueue();
+    S.enemyIndex = 0;
+    S.enemyHpMax = ENEMY_HP_BY_SLOT[0];
     S.enemyHp = S.enemyHpMax;
+    S.enemyAtk = ENEMY_ATK_BY_SLOT[0];
+    S.winsThisSession = 0;
     S.totalQuestions = 0;
     S.correctCount = 0;
-    S.monstersDefeated = 0;
     S.locked = false;
 
-    // load carry-over review items from previous session, spaced through early turns
     var pending = persist.pendingReview || [];
     pending.slice(0,5).forEach(function(item, idx){
       S.dueQueue.push({a:item.a,b:item.b,op:item.op,key:item.key, turnsLeft: 2 + idx*3});
@@ -625,12 +806,11 @@
     document.getElementById('screen-result').classList.add('hidden');
     document.getElementById('screen-game').classList.remove('hidden');
     renderPlayer();
-    renderMonster();
+    renderEnemy();
     nextQuestion();
   }
 
   function showResult(won){
-    // carry forward review items for next session
     var carry = [];
     var seen = {};
     S.dueQueue.concat(S.sessionWrong).forEach(function(item){
@@ -640,17 +820,19 @@
     saveState();
 
     document.getElementById('screen-game').classList.add('hidden');
+    hideAction();
     document.getElementById('screen-result').classList.remove('hidden');
-    document.getElementById('resultTitle').textContent = won ? 'ぜんぶ たおした！' : 'きょうは ここまで！';
+    document.getElementById('resultTitle').textContent = won ? 'よくがんばったね！' : 'きょうは ここまで！';
     document.getElementById('resultEmoji').textContent = won ? '🏆' : '⏳';
     document.getElementById('statTotal').textContent = S.totalQuestions;
     document.getElementById('statCorrect').textContent = S.correctCount;
     var rate = S.totalQuestions ? Math.round(100*S.correctCount/S.totalQuestions) : 0;
     document.getElementById('statRate').textContent = rate + '%';
     document.getElementById('statLv').textContent = S.level;
+    document.getElementById('statZukan').textContent = 'ずかん ' + persist.unlocked.length + '/' + CHARACTERS.length;
   }
 
-  // ---- parent panel ----
+  // ---- parent panel ("おうちのひと") ----
   function renderWeaknessList(){
     var el = document.getElementById('weaknessList');
     var entries = Object.keys(persist.weakness)
@@ -670,14 +852,49 @@
     el.innerHTML = html;
   }
 
-  function exportLog(){
-    var data = {
+  function buildExportJSON(){
+    return JSON.stringify({
       exportedAt: new Date().toISOString(),
       level: S.level,
+      unlocked: persist.unlocked,
       weakness: persist.weakness,
       wrongLog: persist.wrongLog
-    };
-    var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    }, null, 2);
+  }
+
+  function showCopyToast(msg){
+    var t = document.getElementById('copyToast');
+    t.textContent = msg;
+    setTimeout(function(){ t.textContent=''; }, 3000);
+  }
+
+  function copyLogText(){
+    var text = buildExportJSON();
+    if(typeof navigator!=='undefined' && navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        showCopyToast('コピーしました！');
+      }).catch(function(){ fallbackCopy(text); });
+    } else {
+      fallbackCopy(text);
+    }
+  }
+  function fallbackCopy(text){
+    try{
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showCopyToast('コピーしました！');
+    }catch(e){
+      showCopyToast('コピーできませんでした');
+    }
+  }
+
+  function exportLog(){
+    var data = buildExportJSON();
+    var blob = new Blob([data], {type:'application/json'});
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
@@ -688,12 +905,27 @@
     setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
   }
 
-  function resetData(){
-    if(!confirm('記録をぜんぶリセットします。よろしいですか？')) return;
-    persist = { level:1, weakness:{}, pendingReview:[], wrongLog:[] };
-    saveState();
-    renderWeaknessList();
-    alert('リセットしました。');
+  // Reset requires two taps (safety against accidental single-tap wipes),
+  // per spec "確認2回".
+  var resetArmed = false, resetTimer = null;
+  function handleResetClick(){
+    var btn = document.getElementById('resetBtn');
+    if(!resetArmed){
+      resetArmed = true;
+      btn.textContent = 'もう一度タップで消えます';
+      resetTimer = setTimeout(function(){
+        resetArmed = false;
+        btn.textContent = '記録をリセットする';
+      }, 4000);
+    } else {
+      if(resetTimer) clearTimeout(resetTimer);
+      resetArmed = false;
+      btn.textContent = '記録をリセットする';
+      persist = { level:1, weakness:{}, pendingReview:[], wrongLog:[], unlocked: STARTERS.slice() };
+      saveState();
+      renderWeaknessList();
+      showCopyToast('リセットしました。');
+    }
   }
 
   // ---- wire up ----
@@ -712,23 +944,24 @@
   document.getElementById('closePanelBtn').addEventListener('click', function(){
     document.getElementById('parentOverlay').classList.add('hidden');
   });
+  document.getElementById('copyBtn').addEventListener('click', copyLogText);
   document.getElementById('exportBtn').addEventListener('click', exportLog);
-  document.getElementById('resetBtn').addEventListener('click', resetData);
+  document.getElementById('resetBtn').addEventListener('click', handleResetClick);
   document.getElementById('retryBtn').addEventListener('click', goToSelect);
   document.getElementById('startBtn').addEventListener('click', newSession);
 
-  document.addEventListener('keydown', function(e){
-    if(e.key>='0' && e.key<='9') onKey(e.key);
-    else if(e.key==='Backspace') onKey('del');
-    else if(e.key==='Enter') onKey('ok');
-  });
-
-  buildKeypad();
   goToSelect();
 
   // debug hook (harmless in normal use; lets developers inspect state via console)
   if(typeof window!=='undefined'){
-    window.__mb_debug = { S:S, persist:persist, onKey:onKey, newSession:newSession, goToSelect:goToSelect, MONSTER_POOL:MONSTER_POOL };
+    window.__mb_debug = {
+      S:S, CHARACTERS:CHARACTERS, STARTERS:STARTERS,
+      newSession:newSession, goToSelect:goToSelect, chooseAnswer:chooseAnswer,
+      computeAnswer:computeAnswer,
+      // persist gets reassigned wholesale on reset, so expose it via a
+      // getter rather than a snapshot reference.
+      get persist(){ return persist; }
+    };
   }
 })();
 </script>
