@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="けいさんバトル図鑑">
 <title>けいさんバトル図鑑</title>
+<link rel="apple-touch-icon" href="icon.png">
 <style>
   :root{
     --bg1:#1b1035; --bg2:#3a1668; --card:#2a1550; --accent:#ff7b3d; --accent2:#ffd23d;
@@ -42,6 +43,7 @@
     overflow-y:auto; flex:1; align-content:start; padding-bottom:8px;
   }
   .fightercard{
+    position:relative;
     background:#ffffff12; border:2px solid transparent; border-radius:16px; padding:10px 4px 8px;
     display:flex; flex-direction:column; align-items:center; gap:3px; color:#fff; min-height:44px;
   }
@@ -51,6 +53,19 @@
   .fightercard.locked{opacity:.45; filter:grayscale(1);}
   .fightercard:active{transform:scale(.96);}
   #startBtn:disabled{opacity:.35;}
+  .fightercard.rare{
+    position:relative;
+    background:linear-gradient(#ffffff12,#ffffff12) padding-box,
+               linear-gradient(135deg,#ffd23d,#ff7b3d,#ffd23d) border-box;
+    border:2px solid transparent;
+  }
+  .fightercard.rare.locked{ background:linear-gradient(#ffffff12,#ffffff12) padding-box, linear-gradient(135deg,#8a8a8a,#5a5a5a) border-box; }
+  .fightercard.rare::after{ content:'★ レア'; position:absolute; top:3px; right:6px; font-size:8px; color:#ffd23d; font-weight:bold; }
+  .fightercard.rare.locked::after{ content:''; }
+  .shinybadge{ position:absolute; top:3px; left:6px; font-size:11px; }
+  .shinytag{ display:none; font-size:8px; opacity:.8; margin-top:1px; }
+  .fightercard.selected .shinytag{ display:block; }
+  .soundbtn{ background:none; border:none; color:#fff; font-size:18px; padding:6px; line-height:1; }
 
   /* ---- battle arena (player vs enemy) ---- */
   .arena{
@@ -68,6 +83,26 @@
   .fighterart.dead{animation:poof .4s forwards;}
   .fighterart.attack{animation:lunge .45s ease-out;}
   .fighterart.enemyattack{animation:lungeLeft .45s ease-out;}
+  .fighterart.rareglow{animation:rarepulse 1.6s ease-in-out infinite;}
+  @keyframes rarepulse{
+    0%,100%{ filter:drop-shadow(0 0 6px #ffd23d); }
+    50%{ filter:drop-shadow(0 0 16px #ffd23d) drop-shadow(0 0 22px #ff7b3d); }
+  }
+  .fighterart.jumpattack{animation:jumpAtk .5s ease-out;}
+  @keyframes jumpAtk{
+    0%{transform:translateY(0) rotate(0);}
+    40%{transform:translateY(-22px) rotate(-15deg);}
+    70%{transform:translateY(-10px) rotate(10deg);}
+    100%{transform:translateY(0) rotate(0);}
+  }
+  body.screenshake{animation:screenshake .3s;}
+  @keyframes screenshake{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-4px);}
+    40%{transform:translateX(4px);}
+    60%{transform:translateX(-3px);}
+    80%{transform:translateX(3px);}
+  }
   @keyframes shake{
     0%,100%{transform:translateX(0) scale(1);}
     20%{transform:translateX(-10px) scale(1.05);}
@@ -177,7 +212,7 @@
 
 <div id="screen-select" class="screen">
   <div class="topbar">
-    <span></span>
+    <button class="soundbtn" id="soundBtnSelect">🔊</button>
     <span class="selecttitle" style="margin:0;">あいぼうをえらぼう！</span>
     <span></span>
   </div>
@@ -191,7 +226,10 @@
   <div class="topbar">
     <span class="lvbadge" id="lvBadge">Lv.1</span>
     <span class="combotext" id="comboText"></span>
-    <button class="homelink" id="gearBtn">おうちのひと</button>
+    <span style="display:flex; gap:2px; align-items:center;">
+      <button class="soundbtn" id="soundBtn">🔊</button>
+      <button class="homelink" id="gearBtn">おうちのひと</button>
+    </span>
   </div>
 
   <div class="arena">
@@ -288,7 +326,8 @@
     {id:'elephant', name:'ゾウ',             emoji:'🐘'},
     {id:'gorilla',  name:'ゴリラ',           emoji:'🦍'},
     {id:'shark',    name:'ホホジロザメ',     emoji:'🦈'},
-    {id:'hippo',    name:'カバ',             emoji:'🦛'}
+    {id:'hippo',    name:'カバ',             emoji:'🦛'},
+    {id:'titanoboa',name:'ティタノボア',     emoji:'🐍', rare:true}
   ];
   var STARTERS = ['tyranno','lion','eagle'];
   var CHAR_BY_ID = {};
@@ -296,12 +335,13 @@
 
   function loadState(){
     var raw = localStorage.getItem(LS_KEY);
-    var def = { level:1, weakness:{}, pendingReview:[], wrongLog:[], unlocked: STARTERS.slice() };
+    var def = { level:1, weakness:{}, pendingReview:[], wrongLog:[], unlocked: STARTERS.slice(), shiny: [] };
     if(!raw) return def;
     try{
       var parsed = JSON.parse(raw);
       var merged = Object.assign(def, parsed);
       if(!merged.unlocked || !merged.unlocked.length) merged.unlocked = STARTERS.slice();
+      if(!merged.shiny) merged.shiny = [];
       return merged;
     }catch(e){ return def; }
   }
@@ -311,7 +351,8 @@
       weakness: persist.weakness,
       pendingReview: persist.pendingReview,
       wrongLog: persist.wrongLog.slice(-500),
-      unlocked: persist.unlocked
+      unlocked: persist.unlocked,
+      shiny: persist.shiny
     }));
   }
 
@@ -344,7 +385,10 @@
     totalQuestions: 0,
     correctCount: 0,
     current: null,
-    locked: false
+    locked: false,
+    lastAttackPattern: null,
+    playerFighterShiny: false,
+    currentEnemyShiny: false
   };
 
   function key(a,b,op){ return a+op+b; }
@@ -495,13 +539,147 @@
   var actionBtn1 = document.getElementById('actionBtn1');
   var actionBtn2 = document.getElementById('actionBtn2');
 
+  // ---- v2.2: sound engine (WebAudio synthesis, no audio files) ----
+  var soundOn = true;
+  try{ soundOn = localStorage.getItem('mathBattle_sound') !== '0'; }catch(e){}
+  var actx = null;
+  function getCtx(){
+    if(!soundOn) return null;
+    if(typeof window === 'undefined') return null;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return null;
+    if(!actx){ try{ actx = new AC(); }catch(e){ return null; } }
+    if(actx.state === 'suspended'){ try{ actx.resume(); }catch(e){} }
+    return actx;
+  }
+  function updateSoundButtons(){
+    ['soundBtn','soundBtnSelect'].forEach(function(id){
+      var b = document.getElementById(id);
+      if(b) b.textContent = soundOn ? '🔊' : '🔇';
+    });
+  }
+  function setSoundOn(v){
+    soundOn = v;
+    try{ localStorage.setItem('mathBattle_sound', v ? '1' : '0'); }catch(e){}
+    updateSoundButtons();
+  }
+
+  function tone(freq, startTime, dur, type, gainPeak){
+    var ctx = getCtx(); if(!ctx) return;
+    type = type || 'sine'; gainPeak = gainPeak==null ? 0.2 : gainPeak;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime+startTime);
+    gain.gain.setValueAtTime(0, ctx.currentTime+startTime);
+    gain.gain.linearRampToValueAtTime(gainPeak, ctx.currentTime+startTime+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+startTime+dur);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(ctx.currentTime+startTime);
+    osc.stop(ctx.currentTime+startTime+dur+0.02);
+  }
+  function toneSlide(freqFrom, freqTo, startTime, dur, type, gainPeak){
+    var ctx = getCtx(); if(!ctx) return;
+    type = type || 'sawtooth'; gainPeak = gainPeak==null ? 0.18 : gainPeak;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freqFrom, ctx.currentTime+startTime);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(freqTo,1), ctx.currentTime+startTime+dur);
+    gain.gain.setValueAtTime(0, ctx.currentTime+startTime);
+    gain.gain.linearRampToValueAtTime(gainPeak, ctx.currentTime+startTime+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+startTime+dur);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(ctx.currentTime+startTime);
+    osc.stop(ctx.currentTime+startTime+dur+0.02);
+  }
+  function noiseBurst(startTime, dur, gainPeak){
+    var ctx = getCtx(); if(!ctx) return;
+    gainPeak = gainPeak==null ? 0.25 : gainPeak;
+    var bufferSize = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for(var i=0;i<bufferSize;i++){ data[i] = (Math.random()*2-1) * (1 - i/bufferSize); }
+    var src2 = ctx.createBufferSource();
+    src2.buffer = buffer;
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(gainPeak, ctx.currentTime+startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+startTime+dur);
+    src2.connect(gain); gain.connect(ctx.destination);
+    src2.start(ctx.currentTime+startTime);
+  }
+
+  var SFX = {
+    select: function(){ tone(660,0,0.08,'triangle',0.15); },
+    correct: function(){ tone(523,0,0.09,'sine',0.18); tone(784,0.09,0.12,'sine',0.18); },
+    wrong: function(){ tone(160,0,0.35,'square',0.15); },
+    hit: function(mult){
+      noiseBurst(0,0.12,0.22);
+      if(mult>=1.5){ tone(1046,0.05,0.08,'sine',0.15); }
+      if(mult>=2){ tone(1568,0.11,0.1,'sine',0.15); }
+    },
+    enemyAttack: function(){ toneSlide(500,150,0,0.18,'sawtooth',0.12); noiseBurst(0.15,0.1,0.2); },
+    attackSlash: function(){ toneSlide(900,240,0,0.18,'sawtooth',0.16); },
+    attackProjectile: function(){ toneSlide(300,1100,0,0.22,'sine',0.16); },
+    attackJump: function(){ toneSlide(500,1000,0,0.26,'triangle',0.14); },
+    victory: function(){ [523,659,784,1046].forEach(function(f,i){ tone(f,i*0.12,0.16,'triangle',0.18); }); },
+    newZukan: function(){ [784,988,1175].forEach(function(f,i){ tone(f,i*0.09,0.14,'triangle',0.14); }); },
+    shiny: function(){ for(var i=0;i<6;i++){ tone(1200+i*160, i*0.05, 0.09, 'sine', 0.12); } },
+    champion: function(){ [523,659,784,880,1046,1175,1318].forEach(function(f,i){ tone(f,i*0.11,0.16,'triangle',0.18); }); },
+    loss: function(){ [440,392,349,294].forEach(function(f,i){ tone(f,i*0.14,0.22,'sawtooth',0.15); }); }
+  };
+
+  // ---- v2.2: lightweight particle / screen-shake effects ----
+  function elCenter(el){
+    try{
+      var r = el.getBoundingClientRect();
+      return { x: r.left + r.width/2, y: r.top + r.height/2 };
+    }catch(e){ return {x:0,y:0}; }
+  }
+  function spawnParticle(emoji, x, y, opts){
+    opts = opts || {};
+    try{
+      var span = document.createElement('span');
+      span.textContent = emoji;
+      span.style.position = 'fixed';
+      span.style.left = x+'px';
+      span.style.top = y+'px';
+      span.style.fontSize = (opts.size||24)+'px';
+      span.style.zIndex = 999;
+      span.style.pointerEvents = 'none';
+      span.style.transition = 'transform '+(opts.dur||260)+'ms ease-out, opacity '+(opts.dur||260)+'ms ease-out';
+      span.style.transform = 'translate(0,0)';
+      span.style.opacity = '1';
+      document.body.appendChild(span);
+      if(opts.toX!=null){
+        setTimeout(function(){
+          span.style.transform = 'translate('+(opts.toX-x)+'px,'+(opts.toY-y)+'px)';
+        }, 10);
+      } else if(opts.burst){
+        setTimeout(function(){
+          span.style.transform = 'translate('+(opts.dx||0)+'px,'+(opts.dy||0)+'px) scale(1.8)';
+          span.style.opacity = '0';
+        }, 10);
+      }
+      setTimeout(function(){
+        try{
+          if(span.parentNode && span.parentNode.removeChild){ span.parentNode.removeChild(span); }
+          else if(document.body.removeChild){ document.body.removeChild(span); }
+        }catch(e){}
+      }, (opts.life||900));
+    }catch(e){ /* no-op in headless/test environments */ }
+  }
+  function screenShake(){
+    try{ if(document.body && document.body.classList){ pulse(document.body, 'screenshake'); } }catch(e){}
+  }
+
   function pulse(el, cls){
     el.classList.remove(cls);
     void el.offsetWidth;
     el.classList.add(cls);
   }
 
-  function setArt(el, character){
+  function setArt(el, character, shiny){
     // Single-folder deployment: images/<id>.png if present, else emoji fallback.
     el.innerHTML = '';
     var img = document.createElement('img');
@@ -516,6 +694,13 @@
     });
     el.appendChild(img);
     el.appendChild(fallback);
+    if(shiny){
+      var idx = CHARACTERS.indexOf(character);
+      var hue = 120 + ((idx*97)%200);
+      el.style.filter = 'hue-rotate('+hue+'deg) saturate(1.5) brightness(1.15)';
+    } else {
+      el.style.filter = '';
+    }
   }
 
   function renderQuestion(){
@@ -551,23 +736,33 @@
   }
 
   function renderPlayer(){
-    playerName.textContent = S.playerFighter.name;
-    setArt(playerArt, S.playerFighter);
-    playerArt.classList.remove('attack','hit');
+    playerName.textContent = (S.playerFighterShiny?'✨':'') + S.playerFighter.name;
+    setArt(playerArt, S.playerFighter, S.playerFighterShiny);
+    playerArt.classList.remove('attack','hit','jumpattack');
+    playerArt.classList.toggle('rareglow', !!S.playerFighter.rare);
     updatePlayerHpBar();
   }
 
   function renderEnemy(){
     var m = S.enemyQueue[S.enemyIndex];
-    monsterName.textContent = m.name;
-    setArt(monsterArt, m);
-    monsterArt.classList.remove('hit','dead','enemyattack');
+    var shiny = !!S.currentEnemyShiny;
+    monsterName.textContent = (shiny?'✨':'') + m.name;
+    setArt(monsterArt, m, shiny);
+    monsterArt.classList.remove('hit','dead','enemyattack','jumpattack');
+    monsterArt.classList.toggle('rareglow', !!m.rare);
     updateEnemyHpBar();
     monsterDots.innerHTML = '';
     for(var i=0;i<S.enemyQueue.length;i++){
       var d = document.createElement('div');
       d.className = 'mdot' + (i<S.enemyIndex ? ' done' : (i===S.enemyIndex ? ' cur' : ''));
       monsterDots.appendChild(d);
+    }
+    if(shiny){
+      SFX.shiny();
+      var c = elCenter(monsterArt);
+      for(var p=0;p<5;p++){
+        spawnParticle('✨', c.x, c.y, {burst:true, dx:(Math.random()-0.5)*60, dy:(Math.random()-0.5)*60, dur:500, life:700, size:16});
+      }
     }
   }
 
@@ -581,6 +776,46 @@
     feedback.textContent = text;
     feedback.className = 'feedback show ' + cls;
     setTimeout(function(){ feedback.className='feedback'; }, 700);
+  }
+
+  // ---- v2.2: attack animation patterns (3 variants, no immediate repeat) ----
+  var ATTACK_PATTERNS = ['bodyslam','projectile','jump'];
+  var ATTACK_HIT_DELAY = { bodyslam:200, projectile:260, jump:300 };
+  function pickAttackPattern(){
+    var choices = ATTACK_PATTERNS.filter(function(p){ return p !== S.lastAttackPattern; });
+    var pick = choices[Math.floor(Math.random()*choices.length)];
+    S.lastAttackPattern = pick;
+    return pick;
+  }
+  function runPlayerAttack(pattern){
+    if(pattern==='bodyslam'){
+      pulse(playerArt, 'attack');
+    } else if(pattern==='projectile'){
+      pulse(playerArt, 'attack');
+      var proj = ['🔥','⚡','💫','🌪️'][Math.floor(Math.random()*4)];
+      var from = elCenter(playerArt), to = elCenter(monsterArt);
+      spawnParticle(proj, from.x-13, from.y-13, {toX:to.x-13, toY:to.y-13, dur:260, life:400, size:26});
+    } else {
+      pulse(playerArt, 'jumpattack');
+    }
+    SFX[pattern==='bodyslam' ? 'attackSlash' : (pattern==='projectile' ? 'attackProjectile' : 'attackJump')]();
+  }
+  function applyEnemyHitEffect(mult, dying){
+    pulse(monsterArt, dying ? 'dead' : 'hit');
+    updateEnemyHpBar();
+    SFX.hit(mult);
+    var c = elCenter(monsterArt);
+    spawnParticle('💥', c.x-15, c.y-15, {burst:true, dur:300, life:500, size:30});
+    if(mult>1){
+      screenShake();
+      var particles = ['✨','⭐','💫'];
+      var n = 4 + Math.floor(Math.random()*4);
+      for(var i=0;i<n;i++){
+        var ang = Math.random()*Math.PI*2;
+        var dist = 30+Math.random()*30;
+        spawnParticle(particles[i%particles.length], c.x, c.y, {burst:true, dx:Math.cos(ang)*dist, dy:Math.sin(ang)*dist, dur:400, life:600, size:20});
+      }
+    }
   }
 
   // ---- answering ----
@@ -601,8 +836,12 @@
       var mult = comboMultiplier(S.comboStreak);
       var dmg = Math.max(1, Math.round((8 + Math.floor(Math.random()*6)) * mult));
       S.enemyHp -= dmg;
-      pulse(playerArt, 'attack');
-      pulse(monsterArt, 'hit');
+      SFX.correct();
+      var pattern = pickAttackPattern();
+      var seqDelay = ATTACK_HIT_DELAY[pattern];
+      var enemyDies = S.enemyHp<=0;
+      runPlayerAttack(pattern);
+      setTimeout(function(){ applyEnemyHitEffect(mult, enemyDies); }, seqDelay);
       showFeedback(mult>1 ? ('せいかい！コンボx'+mult) : 'せいかい！', 'good');
       if(btnEl){ btnEl.classList.add('correct'); }
 
@@ -610,15 +849,13 @@
 
       saveState();
 
-      if(S.enemyHp<=0){
-        pulse(monsterArt, 'dead');
-        updateEnemyHpBar();
-        setTimeout(function(){ handleVictory(); }, 550);
+      var totalDelay = seqDelay + 400;
+      if(enemyDies){
+        setTimeout(function(){ handleVictory(); }, totalDelay);
         return;
       }
-      updateEnemyHpBar();
-      if(S.totalQuestions>=QUESTION_CAP){ setTimeout(function(){ showResult(false); }, 550); return; }
-      setTimeout(function(){ nextQuestion(); }, 550);
+      if(S.totalQuestions>=QUESTION_CAP){ setTimeout(function(){ showResult(false); }, totalDelay); return; }
+      setTimeout(function(){ nextQuestion(); }, totalDelay);
 
     } else {
       S.wrongStreak++; S.correctStreak=0; S.comboStreak=0;
@@ -629,8 +866,14 @@
 
       var enemyDmg = Math.max(1, S.enemyAtk + Math.floor(Math.random()*5) - 2);
       S.playerHp -= enemyDmg;
+      SFX.enemyAttack();
       pulse(monsterArt, 'enemyattack');
-      pulse(playerArt, 'hit');
+      setTimeout(function(){
+        pulse(playerArt, 'hit');
+        var c = elCenter(playerArt);
+        spawnParticle('💥', c.x-15, c.y-15, {burst:true, dur:300, life:500, size:28});
+        screenShake();
+      }, 180);
       showFeedback('はずれ！', 'bad');
       if(btnEl){ btnEl.classList.add('wrong'); }
       for(var i=0;i<buttons.length;i++){
@@ -648,6 +891,7 @@
       setTimeout(function(){
         revealOverlay.classList.add('hidden');
         if(S.playerHp<=0){
+          SFX.loss();
           handleLoss();
         } else if(S.totalQuestions>=QUESTION_CAP){
           showResult(false);
@@ -681,9 +925,17 @@
     S.winsThisSession++;
     var beaten = S.enemyQueue[S.enemyIndex];
     var isNew = persist.unlocked.indexOf(beaten.id) === -1;
-    if(isNew){ persist.unlocked.push(beaten.id); saveState(); }
+    if(isNew){ persist.unlocked.push(beaten.id); }
+    var shinyNew = false;
+    if(S.currentEnemyShiny && persist.shiny.indexOf(beaten.id)===-1){
+      persist.shiny.push(beaten.id);
+      shinyNew = true;
+    }
+    if(isNew || shinyNew){ saveState(); }
+    if(isNew && !shinyNew) SFX.newZukan();
 
     if(S.winsThisSession>=3){
+      SFX.champion();
       showAction({
         title: '🏆 今日のチャンピオン！ 🏆',
         body: '３れんしょう！ すごい！',
@@ -691,9 +943,23 @@
       });
       return;
     }
+
+    var rareUnlock = isNew && beaten.rare;
+    var title, body;
+    if(shinyNew){
+      SFX.shiny();
+      title = '✨ いろちがい発見！ ✨';
+      body = beaten.emoji + ' ✨いろちがいが なかまになった！✨';
+    } else if(rareUnlock){
+      title = '🌟 でんせつを てなずけた！ 🌟';
+      body = beaten.emoji + ' レアな ' + beaten.name + '！なかまに なった！✨';
+    } else {
+      title = 'かった！';
+      body = beaten.emoji + ' ' + (isNew ? 'なかまに なった！' : 'かった！');
+    }
     showAction({
-      title: 'かった！',
-      body: beaten.emoji + ' ' + (isNew ? 'なかまに なった！' : 'かった！'),
+      title: title,
+      body: body,
       btn1: { label:'つぎのあいてへ', onClick: goNextEnemy },
       btn2: { label:'ここでおわる', onClick: function(){ hideAction(); showResult(true); } }
     });
@@ -702,6 +968,7 @@
   function goNextEnemy(){
     hideAction();
     S.enemyIndex++;
+    rollShinyForCurrentEnemy();
     var slot = S.enemyIndex;
     S.enemyHpMax = ENEMY_HP_BY_SLOT[slot];
     S.enemyHp = S.enemyHpMax;
@@ -731,12 +998,15 @@
   function renderSelectScreen(){
     fighterGrid.innerHTML = '';
     S.playerFighter = null;
+    S.playerFighterShiny = false;
     startBtn.disabled = true;
-    zukanProgress.textContent = 'ずかん ' + persist.unlocked.length + '/' + CHARACTERS.length;
+    zukanProgress.textContent = 'ずかん ' + persist.unlocked.length + '/' + CHARACTERS.length +
+      '　✨いろちがい ' + persist.shiny.length + '/' + CHARACTERS.length;
     CHARACTERS.forEach(function(m){
       var unlocked = persist.unlocked.indexOf(m.id) !== -1;
+      var hasShiny = unlocked && persist.shiny.indexOf(m.id) !== -1;
       var card = document.createElement('button');
-      card.className = 'fightercard' + (unlocked ? '' : ' locked');
+      card.className = 'fightercard' + (unlocked ? '' : ' locked') + (m.rare ? ' rare' : '');
       card.type = 'button';
       var artDiv = document.createElement('div');
       artDiv.className = 'fcart';
@@ -746,13 +1016,31 @@
       nDiv.textContent = unlocked ? m.name : '？？？';
       card.appendChild(artDiv);
       card.appendChild(nDiv);
+      if(hasShiny){
+        var badge = document.createElement('div');
+        badge.className = 'shinybadge';
+        badge.textContent = '✨';
+        card.appendChild(badge);
+        var tag = document.createElement('div');
+        tag.className = 'shinytag';
+        tag.textContent = 'もういちどタップで✨';
+        card.appendChild(tag);
+      }
       if(unlocked){
         card.addEventListener('click', function(){
+          if(S.playerFighter && S.playerFighter.id === m.id && hasShiny){
+            S.playerFighterShiny = !S.playerFighterShiny;
+            card.classList.toggle('selected', true);
+            SFX.select();
+            return;
+          }
           S.playerFighter = m;
+          S.playerFighterShiny = false;
           var cards = fighterGrid.querySelectorAll('.fightercard');
           for(var i=0;i<cards.length;i++){ cards[i].classList.remove('selected'); }
           card.classList.add('selected');
           startBtn.disabled = false;
+          SFX.select();
         });
       }
       fighterGrid.appendChild(card);
@@ -768,15 +1056,43 @@
   }
 
   // ---- session lifecycle ----
+  var RARE_WEIGHT = 0.3; // rare characters are picked ~3x less often than normal ones
+
+  // Weighted shuffle: repeatedly draw without replacement, where each draw's
+  // odds favor non-rare characters over rare ones (RARE_WEIGHT).
+  function weightedShuffle(arr){
+    var pool = arr.slice();
+    var out = [];
+    while(pool.length){
+      var total = 0;
+      var weights = pool.map(function(m){ var w = m.rare ? RARE_WEIGHT : 1; total += w; return w; });
+      var r = Math.random()*total;
+      var idx = 0;
+      for(;idx<pool.length;idx++){ r -= weights[idx]; if(r<=0) break; }
+      if(idx>=pool.length) idx = pool.length-1;
+      out.push(pool[idx]);
+      pool.splice(idx,1);
+    }
+    return out;
+  }
+
+  // 8.3: prefer zukan-unregistered characters as opponents so the dex fills
+  // up naturally; rare weighting is applied within each group.
   function pickEnemyQueue(){
-    var pool = CHARACTERS.filter(function(m){
+    var remaining = CHARACTERS.filter(function(m){
       return !S.playerFighter || m.id !== S.playerFighter.id;
     });
-    for(var i=pool.length-1;i>0;i--){
-      var j = Math.floor(Math.random()*(i+1));
-      var t=pool[i]; pool[i]=pool[j]; pool[j]=t;
-    }
-    return pool.slice(0,3);
+    var unregistered = remaining.filter(function(m){ return persist.unlocked.indexOf(m.id)===-1; });
+    var registered = remaining.filter(function(m){ return persist.unlocked.indexOf(m.id)!==-1; });
+    var ordered = weightedShuffle(unregistered).concat(weightedShuffle(registered));
+    return ordered.slice(0,3);
+  }
+
+  function shinyChance(){
+    return persist.unlocked.length >= CHARACTERS.length ? 0.35 : 0.15;
+  }
+  function rollShinyForCurrentEnemy(){
+    S.currentEnemyShiny = Math.random() < shinyChance();
   }
 
   function newSession(){
@@ -788,6 +1104,8 @@
     S.playerHp = PLAYER_MAX_HP; S.playerHpMax = PLAYER_MAX_HP;
     S.enemyQueue = pickEnemyQueue();
     S.enemyIndex = 0;
+    S.lastAttackPattern = null;
+    rollShinyForCurrentEnemy();
     S.enemyHpMax = ENEMY_HP_BY_SLOT[0];
     S.enemyHp = S.enemyHpMax;
     S.enemyAtk = ENEMY_ATK_BY_SLOT[0];
@@ -829,7 +1147,8 @@
     var rate = S.totalQuestions ? Math.round(100*S.correctCount/S.totalQuestions) : 0;
     document.getElementById('statRate').textContent = rate + '%';
     document.getElementById('statLv').textContent = S.level;
-    document.getElementById('statZukan').textContent = 'ずかん ' + persist.unlocked.length + '/' + CHARACTERS.length;
+    document.getElementById('statZukan').textContent = 'ずかん ' + persist.unlocked.length + '/' + CHARACTERS.length +
+      '　✨いろちがい ' + persist.shiny.length + '/' + CHARACTERS.length;
   }
 
   // ---- parent panel ("おうちのひと") ----
@@ -857,6 +1176,7 @@
       exportedAt: new Date().toISOString(),
       level: S.level,
       unlocked: persist.unlocked,
+      shiny: persist.shiny,
       weakness: persist.weakness,
       wrongLog: persist.wrongLog
     }, null, 2);
@@ -921,7 +1241,7 @@
       if(resetTimer) clearTimeout(resetTimer);
       resetArmed = false;
       btn.textContent = '記録をリセットする';
-      persist = { level:1, weakness:{}, pendingReview:[], wrongLog:[], unlocked: STARTERS.slice() };
+      persist = { level:1, weakness:{}, pendingReview:[], wrongLog:[], unlocked: STARTERS.slice(), shiny: [] };
       saveState();
       renderWeaknessList();
       showCopyToast('リセットしました。');
@@ -949,6 +1269,9 @@
   document.getElementById('resetBtn').addEventListener('click', handleResetClick);
   document.getElementById('retryBtn').addEventListener('click', goToSelect);
   document.getElementById('startBtn').addEventListener('click', newSession);
+  document.getElementById('soundBtn').addEventListener('click', function(){ setSoundOn(!soundOn); });
+  document.getElementById('soundBtnSelect').addEventListener('click', function(){ setSoundOn(!soundOn); });
+  updateSoundButtons();
 
   goToSelect();
 
