@@ -206,9 +206,66 @@
   .closepanel{margin-top:10px; width:100%; background:none; border:none; color:#aaa; font-size:14px; padding:10px; min-height:44px;}
   .actiontitle{font-size:20px; font-weight:bold; text-align:center;}
   .copytoast{font-size:12px; color:var(--good); text-align:center; margin-top:6px; min-height:16px;}
+
+  /* ---- v2.4: achievement toast ---- */
+  .achievement-toast{
+    position:fixed; top:calc(env(safe-area-inset-top) + 10px); left:50%;
+    transform:translateX(-50%) translateY(-20px);
+    background:linear-gradient(135deg,#ffd23d,#ff7b3d); color:#3a1668; font-weight:bold; font-size:13px;
+    padding:10px 18px; border-radius:20px; box-shadow:0 4px 14px #00000055; z-index:999; opacity:0;
+    transition:opacity .3s, transform .3s; pointer-events:none; text-align:center; max-width:90%;
+  }
+  .achievement-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ---- v2.4: profile select screen ---- */
+  .profilecard{
+    background:#ffffff12; border:2px solid #ffffff30; border-radius:20px; padding:18px 10px;
+    display:flex; flex-direction:column; align-items:center; gap:6px; color:#fff; min-height:44px;
+  }
+  .profilecard:active{transform:scale(.97);}
+  .pfart{font-size:48px; line-height:1;}
+  .pfart img{width:64px; height:64px; object-fit:contain; display:block;}
+  .pfname{font-size:16px; font-weight:bold;}
+  .pfedit{font-size:11px; opacity:.75; text-decoration:underline; padding:6px; display:inline-block;}
+  .profilebar{display:flex; justify-content:space-between; align-items:center; padding:0 4px 6px; font-size:11px; opacity:.85;}
+
+  /* ---- v2.4: star rank + info button on zukan cards ---- */
+  .starrow{font-size:9px; color:var(--accent2); margin-top:1px;}
+  .infobtn{
+    position:absolute; bottom:2px; right:2px; width:20px; height:20px; border-radius:50%;
+    background:#00000055; color:#fff; font-size:11px; line-height:20px; text-align:center; padding:0;
+  }
+
+  /* ---- v2.4: restore textarea ---- */
+  #restoreInput{
+    width:100%; font-size:11px; border-radius:8px; padding:6px; background:#00000030; color:#fff;
+    border:1px solid #ffffff30; font-family:inherit;
+  }
 </style>
 </head>
 <body>
+
+<div id="achievementToast" class="achievement-toast"></div>
+
+<div id="screen-profile" class="screen hidden">
+  <div class="topbar">
+    <span></span>
+    <span class="selecttitle" style="margin:0;">だれが あそぶ？</span>
+    <span></span>
+  </div>
+  <div style="display:flex; flex-direction:column; gap:14px; padding:6px 10px; flex:1; justify-content:center;">
+    <button class="profilecard" id="profileCardP1" type="button">
+      <div class="pfart" id="pfArtP1"></div>
+      <div class="pfname" id="pfNameP1">プレイヤー1</div>
+      <span class="pfedit" id="pfEditP1">✎ なまえをへんしゅう／アイコンは タップでかえる</span>
+    </button>
+    <button class="profilecard" id="profileCardP2" type="button">
+      <div class="pfart" id="pfArtP2"></div>
+      <div class="pfname" id="pfNameP2">プレイヤー2</div>
+      <span class="pfedit" id="pfEditP2">✎ なまえをへんしゅう／アイコンは タップでかえる</span>
+    </button>
+  </div>
+</div>
 
 <div id="screen-select" class="screen">
   <div class="topbar">
@@ -216,9 +273,14 @@
     <span class="selecttitle" style="margin:0;">あいぼうをえらぼう！</span>
     <span></span>
   </div>
+  <div class="profilebar">
+    <span id="profileNameDisplay">プレイヤー1</span>
+    <button class="linkbtn" id="switchProfileBtn" style="margin:0; font-size:11px;">プロフィールをかえる</button>
+  </div>
   <div class="zukanprogress" id="zukanProgress">ずかん 3/12</div>
   <div class="fightergrid" id="fighterGrid"></div>
   <button class="bigbtn" id="startBtn" disabled>たたかう！</button>
+  <button class="bigbtn" id="tourneyBtn" disabled style="background:linear-gradient(135deg,#ffd23d,#ff7b3d); display:none; margin-top:8px;">👑さいきょうおう けっていせん</button>
   <button class="homelink" id="gearBtnSelect" style="align-self:center;">おうちのひと</button>
 </div>
 
@@ -278,6 +340,18 @@
   </div>
 </div>
 
+<div id="detailOverlay" class="overlay hidden">
+  <div class="panel" style="text-align:center;">
+    <div style="font-size:16px; font-weight:bold;" id="detailName">-</div>
+    <div class="fighterart" style="font-size:64px; margin:10px auto; width:80px; height:80px; display:flex; align-items:center; justify-content:center;" id="detailArt"></div>
+    <div style="font-size:13px; margin:6px 0;">つよさ <span id="detailPower" style="color:var(--accent2); font-weight:bold; font-size:18px;">0</span></div>
+    <div style="font-size:12px; opacity:.85; margin:8px 0;" id="detailTrivia">-</div>
+    <div style="font-size:13px;" id="detailStars">-</div>
+    <div style="font-size:12px; opacity:.8; margin-top:4px;" id="detailShiny"></div>
+    <button class="closepanel" id="closeDetailBtn">とじる</button>
+  </div>
+</div>
+
 <div id="screen-result" class="screen hidden">
   <div class="resultwrap">
     <div class="resulttitle" id="resultTitle">クリア！</div>
@@ -289,6 +363,7 @@
       <div class="stat"><div class="num" id="statLv">1</div><div class="lbl">とうたつレベル</div></div>
     </div>
     <div style="font-size:12px; opacity:.75;" id="statZukan">ずかん 3/12</div>
+    <div style="font-size:12px; opacity:.85; margin-top:2px;" id="statOvercome"></div>
     <button class="bigbtn" id="retryBtn">もういちど あいぼうをえらぶ</button>
     <button class="linkbtn" id="parentLinkBtn">おうちのひと</button>
   </div>
@@ -304,6 +379,12 @@
       <button id="resetBtn" class="danger">記録をリセットする</button>
     </div>
     <div class="copytoast" id="copyToast"></div>
+    <div style="margin-top:14px;">
+      <div style="font-size:12px; opacity:.8; margin-bottom:4px;">ふっこく（JSONをはりつけ）</div>
+      <textarea id="restoreInput" rows="3" placeholder="ここに書き出したJSONを貼り付けてください"></textarea>
+      <button id="restoreBtn" style="margin-top:6px; width:100%; background:#ffffff14; border:1px solid #ffffff30; color:#fff; padding:10px; border-radius:10px; min-height:44px; font-size:14px;">ふっこくする</button>
+    </div>
+    <div style="font-size:10px; opacity:.6; margin-top:16px; text-align:center;">BGM：バトル曲＝魔王魂／ホーム・図鑑曲＝DOVA-SYNDROME</div>
     <button class="closepanel" id="closePanelBtn">とじる</button>
   </div>
 </div>
@@ -312,7 +393,8 @@
 (function(){
   "use strict";
 
-  var LS_KEY = "mathBattle_v2";
+  var LEGACY_LS_KEY = "mathBattle_v2";
+  var PROFILES_KEY = "mathBattle_profiles";
 
   var CHARACTERS = [
     {id:'tyranno',  name:'ティラノサウルス', emoji:'🦖'},
@@ -333,33 +415,99 @@
   var CHAR_BY_ID = {};
   CHARACTERS.forEach(function(c){ CHAR_BY_ID[c.id] = c; });
 
-  function loadState(){
-    var raw = localStorage.getItem(LS_KEY);
-    var def = { level:1, weakness:{}, pendingReview:[], wrongLog:[], unlocked: STARTERS.slice(), shiny: [] };
-    if(!raw) return def;
-    try{
-      var parsed = JSON.parse(raw);
-      var merged = Object.assign(def, parsed);
-      if(!merged.unlocked || !merged.unlocked.length) merged.unlocked = STARTERS.slice();
-      if(!merged.shiny) merged.shiny = [];
-      return merged;
-    }catch(e){ return def; }
-  }
-  function saveState(){
-    localStorage.setItem(LS_KEY, JSON.stringify({
-      level: persist.level,
-      weakness: persist.weakness,
-      pendingReview: persist.pendingReview,
-      wrongLog: persist.wrongLog.slice(-500),
-      unlocked: persist.unlocked,
-      shiny: persist.shiny
-    }));
+  // ---- v2.4: per-profile data layer ----
+  // Each profile holds a full copy of what used to be the single flat
+  // "persist" object. `persist` (below) is a live reference into
+  // profiles[profiles.current] and gets reassigned on profile switch;
+  // all existing code that reads/writes persist.xxx keeps working as-is.
+  function defaultProfileData(name){
+    return {
+      name: name,
+      iconId: null,
+      level: 1,
+      weakness: {},
+      weaknessPeak: {},
+      overcomeList: [],
+      overcomeHistory: [],
+      pendingReview: [],
+      wrongLog: [],
+      unlocked: STARTERS.slice(),
+      shiny: [],
+      wins: {},
+      kingTitle: false
+    };
   }
 
-  var persist = loadState();
+  // Convert a legacy (pre-v2.4) flat mathBattle_v2 payload into the new
+  // per-profile shape, preserving every field that has a home in it.
+  function legacyToProfile(legacy, name){
+    var d = defaultProfileData(name);
+    legacy = legacy || {};
+    d.level = legacy.level || 1;
+    d.weakness = legacy.weakness || {};
+    d.pendingReview = legacy.pendingReview || [];
+    d.wrongLog = legacy.wrongLog || [];
+    d.unlocked = (legacy.unlocked && legacy.unlocked.length) ? legacy.unlocked : STARTERS.slice();
+    d.shiny = legacy.shiny || [];
+    // best-effort seed: we can't recover true historical peaks, so start
+    // each weaknessPeak at the current score (won't retroactively grant
+    // "overcome" badges for old data, but won't misfire either).
+    Object.keys(d.weakness).forEach(function(k){ d.weaknessPeak[k] = d.weakness[k]; });
+    return d;
+  }
+
+  function saveProfiles(p){
+    try{ localStorage.setItem(PROFILES_KEY, JSON.stringify(p)); }catch(e){}
+  }
+
+  function loadProfiles(){
+    var raw = null;
+    try{ raw = localStorage.getItem(PROFILES_KEY); }catch(e){}
+    if(raw){
+      try{
+        var parsed = JSON.parse(raw);
+        if(parsed && parsed.p1){
+          // merge with defaults so newly-added fields (future versions)
+          // always exist even on an older saved profiles blob.
+          parsed.p1 = Object.assign(defaultProfileData('プレイヤー1'), parsed.p1);
+          parsed.p2 = Object.assign(defaultProfileData('プレイヤー2'), parsed.p2 || {});
+          if(!parsed.current || (parsed.current!=='p1' && parsed.current!=='p2')) parsed.current = 'p1';
+          return parsed;
+        }
+      }catch(e){ /* fall through to migration/fresh-start below */ }
+    }
+    // No valid new-format save yet: migrate the legacy single-profile save
+    // (if any) into p1 so existing progress is never lost, then persist
+    // the migration immediately so it only ever runs once.
+    var legacyRaw = null;
+    try{ legacyRaw = localStorage.getItem(LEGACY_LS_KEY); }catch(e){}
+    var p1;
+    if(legacyRaw){
+      try{ p1 = legacyToProfile(JSON.parse(legacyRaw), 'プレイヤー1'); }
+      catch(e){ p1 = defaultProfileData('プレイヤー1'); }
+    } else {
+      p1 = defaultProfileData('プレイヤー1');
+    }
+    var profiles = { current: 'p1', p1: p1, p2: defaultProfileData('プレイヤー2') };
+    saveProfiles(profiles);
+    return profiles;
+  }
+
+  function saveState(){
+    persist.wrongLog = persist.wrongLog.slice(-500);
+    profiles[profiles.current] = persist;
+    saveProfiles(profiles);
+  }
+
+  var profiles = loadProfiles();
+  var persist = profiles[profiles.current];
 
   var ENEMY_HP_BY_SLOT  = [35, 45, 60];
   var ENEMY_ATK_BY_SLOT = [7, 10, 13];
+  // 9.6: strongest-king tournament -- 5-enemy gauntlet, HP carries over,
+  // slightly tougher than a normal 3-enemy run.
+  var TOURNEY_ENEMY_HP_BY_SLOT  = [40, 50, 60, 70, 80];
+  var TOURNEY_ENEMY_ATK_BY_SLOT = [8, 10, 12, 14, 17];
   var PLAYER_MAX_HP = 100;
   var MAX_LEVEL = 8;
   var QUESTION_CAP = 40;
@@ -388,7 +536,9 @@
     locked: false,
     lastAttackPattern: null,
     playerFighterShiny: false,
-    currentEnemyShiny: false
+    currentEnemyShiny: false,
+    tournamentMode: false,
+    sessionOvercome: []
   };
 
   function key(a,b,op){ return a+op+b; }
@@ -562,6 +712,7 @@
     soundOn = v;
     try{ localStorage.setItem('mathBattle_sound', v ? '1' : '0'); }catch(e){}
     updateSoundButtons();
+    if(!v){ stopBgm(); } else { playBgm(desiredBgm); }
   }
 
   function tone(freq, startTime, dur, type, gainPeak){
@@ -626,8 +777,88 @@
     newZukan: function(){ [784,988,1175].forEach(function(f,i){ tone(f,i*0.09,0.14,'triangle',0.14); }); },
     shiny: function(){ for(var i=0;i<6;i++){ tone(1200+i*160, i*0.05, 0.09, 'sine', 0.12); } },
     champion: function(){ [523,659,784,880,1046,1175,1318].forEach(function(f,i){ tone(f,i*0.11,0.16,'triangle',0.18); }); },
-    loss: function(){ [440,392,349,294].forEach(function(f,i){ tone(f,i*0.14,0.22,'sawtooth',0.15); }); }
+    loss: function(){ [440,392,349,294].forEach(function(f,i){ tone(f,i*0.14,0.22,'sawtooth',0.15); }); },
+    overcome: function(){ [660,880,1046].forEach(function(f,i){ tone(f,i*0.08,0.12,'triangle',0.16); }); },
+    starRank: function(){ [784,988,1175,1568].forEach(function(f,i){ tone(f,i*0.09,0.14,'triangle',0.16); }); }
   };
+
+  // ---- v2.4: lightweight non-blocking achievement toast (overcome badges, star rank) ----
+  var achToastTimer = null;
+  function showAchievementToast(text){
+    var el = document.getElementById('achievementToast');
+    if(!el) return;
+    el.textContent = text;
+    el.classList.add('show');
+    if(achToastTimer) clearTimeout(achToastTimer);
+    achToastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2400);
+  }
+
+  // ---- v2.4: star rank thresholds (3/10/25 wins as partner) ----
+  function starRankFor(wins){
+    if(wins>=25) return 3;
+    if(wins>=10) return 2;
+    if(wins>=3) return 1;
+    return 0;
+  }
+
+  // ---- v2.4: zukan detail data (9.4, verbatim from spec table) ----
+  var STRENGTH_DATA = {
+    tyranno:  {power:9800, trivia:'きょうりゅうの おうさま。かむ ちからは No.1！'},
+    tricera:  {power:8500, trivia:'3ぼんの ツノで まもりは てっぺき！'},
+    ptera:    {power:7000, trivia:'つばさを ひろげると くるまより おおきい！'},
+    spino:    {power:8800, trivia:'せなかの ほが じまん。およぎも とくい！'},
+    brachio:  {power:8200, trivia:'くびが ながくて ビルの 4かいまで とどく！'},
+    mosa:     {power:9200, trivia:'うみの おうじゃ。サメも たべちゃう！'},
+    lion:     {power:8000, trivia:'ひゃくじゅうの おう。ほえごえは 8キロさきまで きこえる！'},
+    elephant: {power:8600, trivia:'りくで いちばん おおきい どうぶつ！'},
+    gorilla:  {power:7500, trivia:'にぎる ちからは にんげんの 10ばい！'},
+    shark:    {power:8300, trivia:'うみの ハンター。はは なんどでも はえかわる！'},
+    eagle:    {power:6800, trivia:'めが すごく よくて とおくの えものも みつける！'},
+    hippo:    {power:7800, trivia:'くちが 150ど ひらく！じつは とても つよい'},
+    titanoboa:{power:9990, trivia:'でんせつの だいじゃ。バスより ながい！'}
+  };
+
+  // ---- v2.4: BGM (real audio files, only these two -- everything else stays WebAudio SFX) ----
+  var BGM_FILES = { battle: 'sounds/bgm_battle.mp3', home: 'sounds/bgm_home.mp3' };
+  var bgmAudio = { battle:null, home:null };
+  var bgmFailed = {};
+  var currentBgm = null;
+  var desiredBgm = 'home';
+  function getBgmAudio(name){
+    if(bgmFailed[name]) return null;
+    if(bgmAudio[name]) return bgmAudio[name];
+    try{
+      if(typeof Audio === 'undefined') { bgmFailed[name] = true; return null; }
+      var a = new Audio(BGM_FILES[name]);
+      a.loop = true;
+      a.volume = 0.3;
+      a.addEventListener('error', function(){ bgmFailed[name] = true; bgmAudio[name] = null; });
+      bgmAudio[name] = a;
+      return a;
+    }catch(e){ bgmFailed[name] = true; return null; }
+  }
+  function stopBgm(){
+    Object.keys(bgmAudio).forEach(function(k){
+      var a = bgmAudio[k];
+      if(a){ try{ a.pause(); }catch(e){} }
+    });
+    currentBgm = null;
+  }
+  function playBgm(name){
+    desiredBgm = name;
+    if(!soundOn){ stopBgm(); return; }
+    if(currentBgm === name) return;
+    stopBgm();
+    var a = getBgmAudio(name);
+    if(!a) return;
+    currentBgm = name;
+    try{
+      var p = a.play();
+      if(p && typeof p.catch === 'function'){
+        p.catch(function(){ currentBgm = null; /* blocked until a real user gesture; next nav retries */ });
+      }
+    }catch(e){ currentBgm = null; }
+  }
 
   // ---- v2.2: lightweight particle / screen-shake effects ----
   function elCenter(el){
@@ -833,6 +1064,21 @@
       S.correctStreak++; S.wrongStreak = 0; S.comboStreak++;
       persist.weakness[S.current.key] = Math.max((persist.weakness[S.current.key]||0)-1, 0);
 
+      // 9.3: overcome-badge detection -- a problem whose score ever reached
+      // >=3 and has now been brought back down to 0 counts as "overcome".
+      if(persist.weakness[S.current.key]===0){
+        var peak = persist.weaknessPeak[S.current.key] || 0;
+        if(peak>=3 && persist.overcomeList.indexOf(S.current.key)===-1){
+          persist.overcomeList.push(S.current.key);
+          var opLabel = S.current.op==='+' ? '＋' : (S.current.op==='-' ? 'ー' : '×');
+          var label = S.current.a + opLabel + S.current.b;
+          persist.overcomeHistory.push({key:S.current.key, a:S.current.a, b:S.current.b, op:S.current.op, t:Date.now()});
+          S.sessionOvercome.push(label);
+          SFX.overcome();
+          showAchievementToast('⭐ '+label+' を こくふく！⭐');
+        }
+      }
+
       var mult = comboMultiplier(S.comboStreak);
       var dmg = Math.max(1, Math.round((8 + Math.floor(Math.random()*6)) * mult));
       S.enemyHp -= dmg;
@@ -860,6 +1106,14 @@
     } else {
       S.wrongStreak++; S.correctStreak=0; S.comboStreak=0;
       persist.weakness[S.current.key] = Math.min((persist.weakness[S.current.key]||0)+3, 30);
+      persist.weaknessPeak[S.current.key] = Math.max(persist.weaknessPeak[S.current.key]||0, persist.weakness[S.current.key]);
+      if(persist.weakness[S.current.key]>=3){
+        // 9.3: if a previously-overcome problem regresses back to >=3, it
+        // must be removed from the overcome list so it can be re-earned
+        // later (explicit spaced-repetition behavior, not a bug).
+        var oIdx = persist.overcomeList.indexOf(S.current.key);
+        if(oIdx!==-1) persist.overcomeList.splice(oIdx,1);
+      }
       persist.wrongLog.push({t:Date.now(), a:S.current.a, b:S.current.b, op:S.current.op, ans:correctAns, user:val, level:S.level});
       S.sessionWrong.push({a:S.current.a,b:S.current.b,op:S.current.op,key:S.current.key});
       scheduleReview(S.current.a, S.current.b, S.current.op, S.current.key, !S.current.fromDue);
@@ -931,10 +1185,36 @@
       persist.shiny.push(beaten.id);
       shinyNew = true;
     }
-    if(isNew || shinyNew){ saveState(); }
-    if(isNew && !shinyNew) SFX.newZukan();
 
-    if(S.winsThisSession>=3){
+    // 9.5: star rank -- count wins-as-partner per character (shiny wins
+    // count toward the same total, per spec, to avoid double bookkeeping).
+    var fid = S.playerFighter.id;
+    var prevWins = persist.wins[fid] || 0;
+    var newWins = prevWins + 1;
+    persist.wins[fid] = newWins;
+    var starUp = starRankFor(newWins) > starRankFor(prevWins);
+
+    saveState();
+    if(isNew && !shinyNew) SFX.newZukan();
+    if(starUp && starRankFor(newWins)===3){
+      SFX.starRank();
+      showAchievementToast('★★★ ' + S.playerFighter.name + ' マスターに なった！★★★');
+    }
+
+    // 9.6: defeating the final enemy of a strongest-king run grants the title.
+    if(S.tournamentMode && S.enemyIndex === S.enemyQueue.length-1){
+      persist.kingTitle = true;
+      saveState();
+      SFX.champion();
+      showAction({
+        title: '👑 さいきょうおうに かがやいた！ 👑',
+        body: '５れんせん せいは！ おめでとう！',
+        btn1: { label:'けっかをみる', onClick: function(){ hideAction(); S.tournamentMode=false; showResult(true); } }
+      });
+      return;
+    }
+
+    if(!S.tournamentMode && S.winsThisSession>=3){
       SFX.champion();
       showAction({
         title: '🏆 今日のチャンピオン！ 🏆',
@@ -960,8 +1240,8 @@
     showAction({
       title: title,
       body: body,
-      btn1: { label:'つぎのあいてへ', onClick: goNextEnemy },
-      btn2: { label:'ここでおわる', onClick: function(){ hideAction(); showResult(true); } }
+      btn1: { label: S.tournamentMode ? 'つぎのてきへ' : 'つぎのあいてへ', onClick: goNextEnemy },
+      btn2: { label:'ここでおわる', onClick: function(){ hideAction(); S.tournamentMode=false; showResult(true); } }
     });
   }
 
@@ -970,9 +1250,11 @@
     S.enemyIndex++;
     rollShinyForCurrentEnemy();
     var slot = S.enemyIndex;
-    S.enemyHpMax = ENEMY_HP_BY_SLOT[slot];
+    var hpArr = S.tournamentMode ? TOURNEY_ENEMY_HP_BY_SLOT : ENEMY_HP_BY_SLOT;
+    var atkArr = S.tournamentMode ? TOURNEY_ENEMY_ATK_BY_SLOT : ENEMY_ATK_BY_SLOT;
+    S.enemyHpMax = hpArr[slot];
     S.enemyHp = S.enemyHpMax;
-    S.enemyAtk = ENEMY_ATK_BY_SLOT[slot];
+    S.enemyAtk = atkArr[slot];
     renderEnemy();
     nextQuestion();
   }
@@ -1000,6 +1282,10 @@
     S.playerFighter = null;
     S.playerFighterShiny = false;
     startBtn.disabled = true;
+    var tourneyBtn = document.getElementById('tourneyBtn');
+    tourneyBtn.disabled = true;
+    tourneyBtn.style.display = (persist.unlocked.length >= CHARACTERS.length) ? '' : 'none';
+    document.getElementById('profileNameDisplay').textContent = persist.name + (persist.kingTitle ? ' 👑' : '');
     zukanProgress.textContent = 'ずかん ' + persist.unlocked.length + '/' + CHARACTERS.length +
       '　✨いろちがい ' + persist.shiny.length + '/' + CHARACTERS.length;
     CHARACTERS.forEach(function(m){
@@ -1027,6 +1313,24 @@
         card.appendChild(tag);
       }
       if(unlocked){
+        // 9.5: star rank badge
+        var starRank = starRankFor(persist.wins[m.id] || 0);
+        if(starRank > 0){
+          var starDiv = document.createElement('div');
+          starDiv.className = 'starrow';
+          starDiv.textContent = '★'.repeat(starRank);
+          card.appendChild(starDiv);
+        }
+        // 9.4: "?" button opens the zukan detail page
+        var infoBtn = document.createElement('span');
+        infoBtn.className = 'infobtn';
+        infoBtn.textContent = '？';
+        infoBtn.addEventListener('click', function(ev){
+          ev.stopPropagation();
+          openDetail(m.id);
+        });
+        card.appendChild(infoBtn);
+
         card.addEventListener('click', function(){
           if(S.playerFighter && S.playerFighter.id === m.id && hasShiny){
             S.playerFighterShiny = !S.playerFighterShiny;
@@ -1040,6 +1344,7 @@
           for(var i=0;i<cards.length;i++){ cards[i].classList.remove('selected'); }
           card.classList.add('selected');
           startBtn.disabled = false;
+          tourneyBtn.disabled = false;
           SFX.select();
         });
       }
@@ -1047,12 +1352,84 @@
     });
   }
 
+  // 9.4: zukan detail overlay
+  function openDetail(id){
+    if(persist.unlocked.indexOf(id)===-1) return;
+    var c = CHAR_BY_ID[id];
+    var sd = STRENGTH_DATA[id] || {power:0, trivia:''};
+    document.getElementById('detailName').textContent = c.name;
+    setArt(document.getElementById('detailArt'), c, false);
+    document.getElementById('detailPower').textContent = sd.power;
+    document.getElementById('detailTrivia').textContent = sd.trivia;
+    var starRank = starRankFor(persist.wins[id] || 0);
+    document.getElementById('detailStars').textContent = starRank > 0 ?
+      ('★'.repeat(starRank) + '（' + (persist.wins[id]||0) + 'かい かった）') : 'まだ かっていない';
+    document.getElementById('detailShiny').textContent = persist.shiny.indexOf(id)!==-1 ? '✨いろちがい しょゆう' : '';
+    document.getElementById('detailOverlay').classList.remove('hidden');
+  }
+
   function goToSelect(){
     document.getElementById('screen-result').classList.add('hidden');
     document.getElementById('screen-game').classList.add('hidden');
+    document.getElementById('screen-profile').classList.add('hidden');
     hideAction();
+    S.tournamentMode = false;
     document.getElementById('screen-select').classList.remove('hidden');
     renderSelectScreen();
+    playBgm('home');
+  }
+
+  // ---- v2.4: "だれが あそぶ？" profile-select screen (9.2) ----
+  function renderProfileScreen(){
+    ['p1','p2'].forEach(function(pid){
+      var prof = profiles[pid];
+      var nameEl = document.getElementById(pid==='p1' ? 'pfNameP1' : 'pfNameP2');
+      var artEl = document.getElementById(pid==='p1' ? 'pfArtP1' : 'pfArtP2');
+      nameEl.textContent = prof.name + (prof.kingTitle ? ' 👑' : '');
+      var iconChar = (prof.iconId && CHAR_BY_ID[prof.iconId]) ? CHAR_BY_ID[prof.iconId] : CHAR_BY_ID[STARTERS[0]];
+      setArt(artEl, iconChar, false);
+    });
+  }
+
+  function goToProfileSelect(){
+    document.getElementById('screen-result').classList.add('hidden');
+    document.getElementById('screen-game').classList.add('hidden');
+    document.getElementById('screen-select').classList.add('hidden');
+    hideAction();
+    document.getElementById('screen-profile').classList.remove('hidden');
+    renderProfileScreen();
+    playBgm('home');
+  }
+
+  function enterProfile(pid){
+    profiles.current = pid;
+    persist = profiles[pid];
+    saveProfiles(profiles);
+    document.getElementById('screen-profile').classList.add('hidden');
+    goToSelect();
+  }
+
+  function wireProfileEdit(pid, editElId){
+    document.getElementById(editElId).addEventListener('click', function(ev){
+      ev.stopPropagation();
+      var name = null;
+      try{ name = window.prompt('なまえを にゅうりょくしてください（ひらがな）', profiles[pid].name); }catch(e){}
+      if(name && name.trim()){ profiles[pid].name = name.trim().slice(0,10); }
+      saveProfiles(profiles);
+      renderProfileScreen();
+    });
+  }
+  function wireIconCycle(pid, artElId){
+    document.getElementById(artElId).addEventListener('click', function(ev){
+      ev.stopPropagation();
+      var prof = profiles[pid];
+      var pool = (prof.unlocked && prof.unlocked.length) ? prof.unlocked : STARTERS;
+      var idx = pool.indexOf(prof.iconId);
+      var next = pool[(idx+1) % pool.length];
+      prof.iconId = next;
+      saveProfiles(profiles);
+      renderProfileScreen();
+    });
   }
 
   // ---- session lifecycle ----
@@ -1088,6 +1465,16 @@
     return ordered.slice(0,3);
   }
 
+  // 9.6: strongest-king gauntlet -- 5 random opponents (rare weighting
+  // still applies for flavor/consistency, but no unregistered-priority
+  // since the dex is already complete by the time this unlocks).
+  function pickTournamentQueue(){
+    var remaining = CHARACTERS.filter(function(m){
+      return !S.playerFighter || m.id !== S.playerFighter.id;
+    });
+    return weightedShuffle(remaining).slice(0,5);
+  }
+
   function shinyChance(){
     return persist.unlocked.length >= CHARACTERS.length ? 0.35 : 0.15;
   }
@@ -1097,10 +1484,12 @@
 
   function newSession(){
     if(!S.playerFighter) return;
+    S.tournamentMode = false;
     S.level = persist.level || 1;
     S.correctStreak = 0; S.wrongStreak = 0; S.comboStreak = 0;
     S.dueQueue = [];
     S.sessionWrong = [];
+    S.sessionOvercome = [];
     S.playerHp = PLAYER_MAX_HP; S.playerHpMax = PLAYER_MAX_HP;
     S.enemyQueue = pickEnemyQueue();
     S.enemyIndex = 0;
@@ -1126,9 +1515,51 @@
     renderPlayer();
     renderEnemy();
     nextQuestion();
+    playBgm('battle');
+  }
+
+  // 9.6: strongest-king tournament session -- same learning engine, a
+  // 5-enemy gauntlet with HP carrying over (no heal between fights, same
+  // as the existing enemy-queue behavior already does for normal battles).
+  function startTournament(){
+    if(!S.playerFighter) return;
+    if(persist.unlocked.length < CHARACTERS.length) return;
+    S.tournamentMode = true;
+    S.level = persist.level || 1;
+    S.correctStreak = 0; S.wrongStreak = 0; S.comboStreak = 0;
+    S.dueQueue = [];
+    S.sessionWrong = [];
+    S.sessionOvercome = [];
+    S.playerHp = PLAYER_MAX_HP; S.playerHpMax = PLAYER_MAX_HP;
+    S.enemyQueue = pickTournamentQueue();
+    S.enemyIndex = 0;
+    S.lastAttackPattern = null;
+    rollShinyForCurrentEnemy();
+    S.enemyHpMax = TOURNEY_ENEMY_HP_BY_SLOT[0];
+    S.enemyHp = S.enemyHpMax;
+    S.enemyAtk = TOURNEY_ENEMY_ATK_BY_SLOT[0];
+    S.winsThisSession = 0;
+    S.totalQuestions = 0;
+    S.correctCount = 0;
+    S.locked = false;
+
+    var pending = persist.pendingReview || [];
+    pending.slice(0,5).forEach(function(item, idx){
+      S.dueQueue.push({a:item.a,b:item.b,op:item.op,key:item.key, turnsLeft: 2 + idx*3});
+    });
+    persist.pendingReview = [];
+
+    document.getElementById('screen-select').classList.add('hidden');
+    document.getElementById('screen-result').classList.add('hidden');
+    document.getElementById('screen-game').classList.remove('hidden');
+    renderPlayer();
+    renderEnemy();
+    nextQuestion();
+    playBgm('battle');
   }
 
   function showResult(won){
+    S.tournamentMode = false;
     var carry = [];
     var seen = {};
     S.dueQueue.concat(S.sessionWrong).forEach(function(item){
@@ -1149,37 +1580,92 @@
     document.getElementById('statLv').textContent = S.level;
     document.getElementById('statZukan').textContent = 'ずかん ' + persist.unlocked.length + '/' + CHARACTERS.length +
       '　✨いろちがい ' + persist.shiny.length + '/' + CHARACTERS.length;
+    var ovEl = document.getElementById('statOvercome');
+    if(ovEl){
+      ovEl.textContent = (S.sessionOvercome && S.sessionOvercome.length) ?
+        ('こんかい こくふくした もんだい：' + S.sessionOvercome.join('、')) : '';
+    }
+    playBgm('home');
   }
 
   // ---- parent panel ("おうちのひと") ----
   function renderWeaknessList(){
     var el = document.getElementById('weaknessList');
+    var html = '<p style="margin:0 0 8px; font-weight:bold;">' + persist.name + ' のきろく</p>';
     var entries = Object.keys(persist.weakness)
       .map(function(k){ return {k:k, score:persist.weakness[k]}; })
       .filter(function(e){ return e.score>0; })
       .sort(function(a,b){ return b.score-a.score; })
       .slice(0,8);
     if(entries.length===0){
-      el.innerHTML = '<p>まだ苦手データがありません。</p>';
-      return;
+      html += '<p>まだ苦手データがありません。</p>';
+    } else {
+      html += '<p>苦手な問題（上位）</p><table>';
+      entries.forEach(function(e){
+        html += '<tr><td>'+e.k.replace('+','＋').replace('-','ー')+'</td><td style="text-align:right">スコア '+e.score+'</td></tr>';
+      });
+      html += '</table>';
     }
-    var html = '<p>苦手な問題（上位）</p><table>';
-    entries.forEach(function(e){
-      html += '<tr><td>'+e.k.replace('+','＋').replace('-','ー')+'</td><td style="text-align:right">スコア '+e.score+'</td></tr>';
-    });
-    html += '</table>';
+    // 9.3: cumulative overcome-badge count + recent history
+    html += '<p style="margin-top:10px;">こくふくした もんだい（るいけい ' + persist.overcomeHistory.length + '）</p>';
+    if(persist.overcomeHistory.length){
+      var recent = persist.overcomeHistory.slice(-5).reverse();
+      html += '<table>';
+      recent.forEach(function(h){
+        var lbl = h.key.replace('+','＋').replace('-','ー');
+        html += '<tr><td>'+lbl+'</td></tr>';
+      });
+      html += '</table>';
+    }
     el.innerHTML = html;
   }
 
+  // 9.7: export now covers the entire mathBattle_profiles structure (all
+  // profiles, not just the active one) plus a timestamp and app version,
+  // so restore can fully round-trip both children's data.
   function buildExportJSON(){
+    saveState();
     return JSON.stringify({
       exportedAt: new Date().toISOString(),
-      level: S.level,
-      unlocked: persist.unlocked,
-      shiny: persist.shiny,
-      weakness: persist.weakness,
-      wrongLog: persist.wrongLog
+      appVersion: 'v2.4',
+      profileName: persist.name,
+      profiles: profiles
     }, null, 2);
+  }
+
+  // 9.7: restore from a pasted export JSON. Double-confirm (2-tap, same
+  // safety pattern as the existing reset) before overwriting.
+  var restoreArmed = false, restoreTimer = null;
+  function handleRestoreClick(){
+    var ta = document.getElementById('restoreInput');
+    var btn = document.getElementById('restoreBtn');
+    var text = (ta.value || '').trim();
+    if(!text){ showCopyToast('JSONを貼り付けてください'); return; }
+    var data;
+    try{ data = JSON.parse(text); }catch(e){ showCopyToast('JSONの形式が正しくありません'); return; }
+    if(!data || !data.profiles || !data.profiles.p1){ showCopyToast('復元できる形式ではありません'); return; }
+    if(!restoreArmed){
+      restoreArmed = true;
+      btn.textContent = 'もう一度タップで上書きします';
+      restoreTimer = setTimeout(function(){
+        restoreArmed = false;
+        btn.textContent = 'ふっこくする';
+      }, 5000);
+    } else {
+      if(restoreTimer) clearTimeout(restoreTimer);
+      restoreArmed = false;
+      btn.textContent = 'ふっこくする';
+      profiles = {
+        current: (data.profiles.current==='p1'||data.profiles.current==='p2') ? data.profiles.current : 'p1',
+        p1: Object.assign(defaultProfileData('プレイヤー1'), data.profiles.p1),
+        p2: Object.assign(defaultProfileData('プレイヤー2'), data.profiles.p2 || {})
+      };
+      persist = profiles[profiles.current];
+      saveProfiles(profiles);
+      renderWeaknessList();
+      showCopyToast('ふっこくしました！');
+      ta.value = '';
+    }
   }
 
   function showCopyToast(msg){
@@ -1241,8 +1727,12 @@
       if(resetTimer) clearTimeout(resetTimer);
       resetArmed = false;
       btn.textContent = '記録をリセットする';
-      persist = { level:1, weakness:{}, pendingReview:[], wrongLog:[], unlocked: STARTERS.slice(), shiny: [] };
-      saveState();
+      var keepName = persist.name;
+      var keepIcon = persist.iconId;
+      persist = defaultProfileData(keepName);
+      persist.iconId = keepIcon;
+      profiles[profiles.current] = persist;
+      saveProfiles(profiles);
       renderWeaknessList();
       showCopyToast('リセットしました。');
     }
@@ -1267,23 +1757,40 @@
   document.getElementById('copyBtn').addEventListener('click', copyLogText);
   document.getElementById('exportBtn').addEventListener('click', exportLog);
   document.getElementById('resetBtn').addEventListener('click', handleResetClick);
+  document.getElementById('restoreBtn').addEventListener('click', handleRestoreClick);
   document.getElementById('retryBtn').addEventListener('click', goToSelect);
   document.getElementById('startBtn').addEventListener('click', newSession);
+  document.getElementById('tourneyBtn').addEventListener('click', startTournament);
+  document.getElementById('switchProfileBtn').addEventListener('click', goToProfileSelect);
+  document.getElementById('closeDetailBtn').addEventListener('click', function(){
+    document.getElementById('detailOverlay').classList.add('hidden');
+  });
+  document.getElementById('profileCardP1').addEventListener('click', function(){ enterProfile('p1'); });
+  document.getElementById('profileCardP2').addEventListener('click', function(){ enterProfile('p2'); });
+  wireProfileEdit('p1','pfEditP1');
+  wireProfileEdit('p2','pfEditP2');
+  wireIconCycle('p1','pfArtP1');
+  wireIconCycle('p2','pfArtP2');
   document.getElementById('soundBtn').addEventListener('click', function(){ setSoundOn(!soundOn); });
   document.getElementById('soundBtnSelect').addEventListener('click', function(){ setSoundOn(!soundOn); });
   updateSoundButtons();
 
-  goToSelect();
+  goToProfileSelect();
 
   // debug hook (harmless in normal use; lets developers inspect state via console)
   if(typeof window!=='undefined'){
     window.__mb_debug = {
       S:S, CHARACTERS:CHARACTERS, STARTERS:STARTERS,
-      newSession:newSession, goToSelect:goToSelect, chooseAnswer:chooseAnswer,
-      computeAnswer:computeAnswer,
-      // persist gets reassigned wholesale on reset, so expose it via a
-      // getter rather than a snapshot reference.
-      get persist(){ return persist; }
+      newSession:newSession, goToSelect:goToSelect, goToProfileSelect:goToProfileSelect,
+      enterProfile:enterProfile, startTournament:startTournament,
+      chooseAnswer:chooseAnswer, computeAnswer:computeAnswer,
+      starRankFor:starRankFor, STRENGTH_DATA:STRENGTH_DATA,
+      buildExportJSON:buildExportJSON, handleRestoreClick:handleRestoreClick,
+      loadProfiles:loadProfiles, legacyToProfile:legacyToProfile, defaultProfileData:defaultProfileData,
+      // persist/profiles get reassigned wholesale on profile switch/reset,
+      // so expose them via getters rather than snapshot references.
+      get persist(){ return persist; },
+      get profiles(){ return profiles; }
     };
   }
 })();
