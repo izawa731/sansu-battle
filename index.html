@@ -227,6 +227,7 @@
   .pfart img{width:64px; height:64px; object-fit:contain; display:block;}
   .pfname{font-size:16px; font-weight:bold;}
   .pfedit{font-size:11px; opacity:.75; text-decoration:underline; padding:6px; display:inline-block;}
+  .pfeditrow{display:flex; gap:4px;}
   .profilebar{display:flex; justify-content:space-between; align-items:center; padding:0 4px 6px; font-size:11px; opacity:.85;}
 
   /* ---- v2.4: star rank + info button on zukan cards ---- */
@@ -257,12 +258,18 @@
     <button class="profilecard" id="profileCardP1" type="button">
       <div class="pfart" id="pfArtP1"></div>
       <div class="pfname" id="pfNameP1">プレイヤー1</div>
-      <span class="pfedit" id="pfEditP1">✎ なまえをへんしゅう／アイコンは タップでかえる</span>
+      <div class="pfeditrow">
+        <span class="pfedit" id="pfEditP1">✎ なまえ</span>
+        <span class="pfedit" id="pfIconBtnP1">🔄 アイコン</span>
+      </div>
     </button>
     <button class="profilecard" id="profileCardP2" type="button">
       <div class="pfart" id="pfArtP2"></div>
       <div class="pfname" id="pfNameP2">プレイヤー2</div>
-      <span class="pfedit" id="pfEditP2">✎ なまえをへんしゅう／アイコンは タップでかえる</span>
+      <div class="pfeditrow">
+        <span class="pfedit" id="pfEditP2">✎ なまえ</span>
+        <span class="pfedit" id="pfIconBtnP2">🔄 アイコン</span>
+      </div>
     </button>
   </div>
 </div>
@@ -1769,8 +1776,8 @@
   document.getElementById('profileCardP2').addEventListener('click', function(){ enterProfile('p2'); });
   wireProfileEdit('p1','pfEditP1');
   wireProfileEdit('p2','pfEditP2');
-  wireIconCycle('p1','pfArtP1');
-  wireIconCycle('p2','pfArtP2');
+  wireIconCycle('p1','pfIconBtnP1');
+  wireIconCycle('p2','pfIconBtnP2');
   document.getElementById('soundBtn').addEventListener('click', function(){ setSoundOn(!soundOn); });
   document.getElementById('soundBtnSelect').addEventListener('click', function(){ setSoundOn(!soundOn); });
   updateSoundButtons();
