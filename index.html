@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 最終更新：2026-07-14 -->
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -47,7 +48,11 @@
     background:#ffffff12; border:2px solid transparent; border-radius:16px; padding:10px 4px 8px;
     display:flex; flex-direction:column; align-items:center; gap:3px; color:#fff; min-height:44px;
   }
-  .fightercard .fcart{font-size:34px; line-height:1;}
+  .fightercard .fcart{
+    font-size:58px; line-height:1; width:72px; height:72px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .fightercard .fcart img{width:68px; height:68px; object-fit:contain; display:block;}
   .fightercard .fcname{font-size:10.5px; opacity:.85; text-align:center;}
   .fightercard.selected{border-color:var(--accent2); background:#ffffff26; transform:scale(1.04);}
   .fightercard.locked{opacity:.45; filter:grayscale(1);}
@@ -77,8 +82,8 @@
     font-size:12px; opacity:.85; margin-bottom:2px; text-align:center;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
   }
-  .fighterart{font-size:52px; line-height:1; display:inline-block;}
-  .fighterart img{width:56px; height:56px; object-fit:contain; display:block;}
+  .fighterart{font-size:96px; line-height:1; display:inline-block;}
+  .fighterart img{width:104px; height:104px; object-fit:contain; display:block;}
   .fighterart.hit{animation:shake .35s;}
   .fighterart.dead{animation:poof .4s forwards;}
   .fighterart.attack{animation:lunge .45s ease-out;}
@@ -237,6 +242,23 @@
     background:#00000055; color:#fff; font-size:11px; line-height:20px; text-align:center; padding:0;
   }
 
+  /* ---- v2.5: large zukan art + per-profile course settings ---- */
+  #detailArt{
+    background:radial-gradient(circle, #7b4db055 0%, #3a166855 48%, #1b103500 72%);
+    border-radius:50%;
+  }
+  #detailArt img{width:180px; height:180px; object-fit:contain; display:block;}
+  .course-settings{
+    background:#ffffff0d; border:1px solid #ffffff20; border-radius:12px;
+    padding:10px; margin-bottom:10px; font-size:12px;
+  }
+  .course-row{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:7px;}
+  .course-row:first-child{margin-top:0;}
+  .course-row select{
+    min-height:44px; max-width:68%; color:#fff; background:#2a1550;
+    border:1px solid #ffffff35; border-radius:9px; padding:7px; font-family:inherit;
+  }
+
   /* ---- v2.4: restore textarea ---- */
   #restoreInput{
     width:100%; font-size:11px; border-radius:8px; padding:6px; background:#00000030; color:#fff;
@@ -293,7 +315,7 @@
 
 <div id="screen-game" class="screen hidden" style="position:relative;">
   <div class="topbar">
-    <span class="lvbadge" id="lvBadge">Lv.1</span>
+    <span></span>
     <span class="combotext" id="comboText"></span>
     <span style="display:flex; gap:2px; align-items:center;">
       <button class="soundbtn" id="soundBtn">🔊</button>
@@ -315,7 +337,7 @@
       <div class="fightername" id="monsterName">-</div>
       <div class="fighterart" id="monsterArt">🦖</div>
       <div class="hpwrap">
-        <div class="hplabel"><span>つよさ</span><span id="hpText">30/30</span></div>
+        <div class="hplabel"><span>HP</span><span id="hpText">30/30</span></div>
         <div class="hpbar-bg"><div class="hpbar-fill enemyfill" id="hpFill" style="width:100%"></div></div>
       </div>
       <div class="monsterdots" id="monsterDots"></div>
@@ -350,7 +372,7 @@
 <div id="detailOverlay" class="overlay hidden">
   <div class="panel" style="text-align:center;">
     <div style="font-size:16px; font-weight:bold;" id="detailName">-</div>
-    <div class="fighterart" style="font-size:64px; margin:10px auto; width:80px; height:80px; display:flex; align-items:center; justify-content:center;" id="detailArt"></div>
+    <div class="fighterart" style="font-size:150px; margin:10px auto; width:180px; height:180px; display:flex; align-items:center; justify-content:center;" id="detailArt"></div>
     <div style="font-size:13px; margin:6px 0;">つよさ <span id="detailPower" style="color:var(--accent2); font-weight:bold; font-size:18px;">0</span></div>
     <div style="font-size:12px; opacity:.85; margin:8px 0;" id="detailTrivia">-</div>
     <div style="font-size:13px;" id="detailStars">-</div>
@@ -379,6 +401,11 @@
 <div id="parentOverlay" class="overlay hidden">
   <div class="panel">
     <h3>おうちのひと</h3>
+    <div class="course-settings">
+      <div class="course-row"><label for="courseProfileSelect">プロフィール</label><select id="courseProfileSelect"></select></div>
+      <div class="course-row"><label for="courseSelect">いまのコース</label><select id="courseSelect"></select></div>
+      <div id="parentLevelDisplay" style="margin-top:7px; opacity:.8;"></div>
+    </div>
     <div id="weaknessList" style="font-size:13px; opacity:.85;">読み込み中…</div>
     <div class="panelbtns">
       <button id="copyBtn">誤答ログをコピーする（JSON）</button>
@@ -432,6 +459,7 @@
       name: name,
       iconId: null,
       level: 1,
+      course: 'c0',
       weakness: {},
       weaknessPeak: {},
       overcomeList: [],
@@ -474,11 +502,15 @@
       try{
         var parsed = JSON.parse(raw);
         if(parsed && parsed.p1){
+          var needsCourseMigration = !parsed.p1.course || !parsed.p2 || !parsed.p2.course;
           // merge with defaults so newly-added fields (future versions)
           // always exist even on an older saved profiles blob.
           parsed.p1 = Object.assign(defaultProfileData('プレイヤー1'), parsed.p1);
           parsed.p2 = Object.assign(defaultProfileData('プレイヤー2'), parsed.p2 || {});
           if(!parsed.current || (parsed.current!=='p1' && parsed.current!=='p2')) parsed.current = 'p1';
+          // v2.5 migration: only add the default course. No existing field or
+          // legacy key is removed or rewritten.
+          if(needsCourseMigration) saveProfiles(parsed);
           return parsed;
         }
       }catch(e){ /* fall through to migration/fresh-start below */ }
@@ -545,10 +577,87 @@
     playerFighterShiny: false,
     currentEnemyShiny: false,
     tournamentMode: false,
+    shieldUsed: false,
     sessionOvercome: []
   };
 
   function key(a,b,op){ return a+op+b; }
+
+  // ---- v2.5: per-profile learning courses ----
+  var COURSES = {
+    c1:{name:'10までの たしざん', min:1, max:1, additionOnly:true},
+    c2:{name:'10までの たしざん・ひきざん', min:1, max:1},
+    c3:{name:'くりあがり・くりさがり', min:1, max:2},
+    c4:{name:'2けたの けいさん', min:1, max:6},
+    c5:{name:'かけざん', min:7, max:8},
+    c0:{name:'おまかせ', min:1, max:8}
+  };
+  var COURSE_ORDER = ['c1','c2','c3','c4','c5','c0'];
+
+  function validCourseId(courseId){ return COURSES[courseId] ? courseId : 'c0'; }
+  function clampLevelForCourse(level, courseId){
+    var c = COURSES[validCourseId(courseId)];
+    level = parseInt(level,10) || c.min;
+    return Math.max(c.min, Math.min(c.max, level));
+  }
+
+  // Return the first (lowest) buildPool level containing this exact problem.
+  // Conditions intentionally mirror buildPool without changing key formats.
+  function levelOfProblem(a,b,op){
+    if(op==='+'){
+      if(a>=1 && a<=9 && b>=1 && b<=9 && a+b<=10) return 1;
+      if(a>=1 && a<=9 && b>=1 && b<=9 && a+b>=11 && a+b<=18) return 2;
+      if(a>=10 && a<=89 && b>=1 && b<=9 && (a%10+b)<=9) return 3;
+      if(a>=10 && a<=89 && b>=1 && b<=9 && (a%10+b)>=10) return 4;
+      if(a>=10 && a<=89 && b>=10 && b<=89 && (a%10+b%10)<=9 && a+b<=99) return 5;
+      if(a>=10 && a<=89 && b>=10 && b<=89 && (a%10+b%10)>=10 && a+b<=99) return 6;
+    } else if(op==='-'){
+      if(a>=1 && a<=9 && b>=0 && b<=a) return 1;
+      if(a>=11 && a<=18 && b>=2 && b<=9 && (a%10)<b && a-b>=1) return 2;
+      if(a>=10 && a<=98 && b>=1 && b<=9 && (a%10)>=b) return 3;
+      if(a>=11 && a<=98 && b>=1 && b<=9 && (a%10)<b) return 4;
+      if(a>=20 && a<=99 && b>=10 && b<=89 && a-b>=1 && (a%10)>=(b%10)) return 5;
+      if(a>=21 && a<=99 && b>=10 && b<=89 && a-b>=1 && (a%10)<(b%10)) return 6;
+    } else if(op==='×'){
+      if(a>=1 && a<=5 && b>=1 && b<=9) return 7;
+      if(a>=1 && a<=9 && b>=1 && b<=9) return 8;
+    }
+    return 0;
+  }
+
+  function questionAllowedForCourse(q, courseId){
+    var c = COURSES[validCourseId(courseId)];
+    var level = levelOfProblem(q.a,q.b,q.op);
+    return level>=c.min && level<=c.max && (!c.additionOnly || q.op==='+');
+  }
+
+  function parseProblemKey(k){
+    var m = /^(\d+)([+\-×])(\d+)$/.exec(k);
+    return m ? {a:parseInt(m[1],10), op:m[2], b:parseInt(m[3],10), key:k} : null;
+  }
+
+  function normalizedProblemKey(a,b,op){
+    if(op==='+' || op==='×'){
+      var lo = Math.min(a,b), hi = Math.max(a,b);
+      return key(lo,hi,op);
+    }
+    return key(a,b,op);
+  }
+
+  function normalizedWeaknessSummary(weakness){
+    var out = {};
+    Object.keys(weakness || {}).forEach(function(k){
+      var q = parseProblemKey(k);
+      if(!q) return;
+      var nk = normalizedProblemKey(q.a,q.b,q.op);
+      out[nk] = (out[nk] || 0) + (weakness[k] || 0);
+    });
+    return out;
+  }
+
+  function displayProblemKey(k){
+    return String(k).replace('+','＋').replace('-','−');
+  }
 
   function buildPool(level){
     if(S.poolCache[level]) return S.poolCache[level];
@@ -588,7 +697,10 @@
   }
 
   function pickWeighted(level){
-    var pool = buildPool(level);
+    // Filter at the course-application layer so buildPool/poolCache retain
+    // their original level-only semantics (notably c1 addition-only).
+    var courseId = validCourseId(persist.course);
+    var pool = buildPool(level).filter(function(q){ return questionAllowedForCourse(q,courseId); });
     var total = 0;
     var weights = new Array(pool.length);
     for(var i=0;i<pool.length;i++){
@@ -605,15 +717,39 @@
     return pool[pool.length-1];
   }
 
+  function pickPastWeakness(){
+    var courseId = validCourseId(persist.course);
+    var candidates = [];
+    var total = 0;
+    Object.keys(persist.weakness || {}).forEach(function(k){
+      var score = persist.weakness[k] || 0;
+      if(score<2) return;
+      var q = parseProblemKey(k);
+      if(!q) return;
+      var level = levelOfProblem(q.a,q.b,q.op);
+      if(level<=0 || level>=S.level || !questionAllowedForCourse(q,courseId)) return;
+      q.score = score;
+      candidates.push(q);
+      total += score;
+    });
+    if(!candidates.length) return null;
+    var r = Math.random()*total;
+    for(var i=0;i<candidates.length;i++){
+      r -= candidates[i].score;
+      if(r<=0) return candidates[i];
+    }
+    return candidates[candidates.length-1];
+  }
+
   // Schedule (or reschedule) a question for spaced-repetition review.
   // "直後" (immediate) only for a fresh miss; "3問後" fixed delay per spec.
   // Dedupes by key so the same problem never stacks multiple queue entries.
   function scheduleReview(a,b,op,k,immediate){
     S.dueQueue = S.dueQueue.filter(function(it){ return it.key!==k; });
     if(immediate){
-      S.dueQueue.push({a:a,b:b,op:op,key:k,turnsLeft:1});
+      S.dueQueue.push({a:a,b:b,op:op,key:k,turnsLeft:1,revenge:true});
     }
-    S.dueQueue.push({a:a,b:b,op:op,key:k,turnsLeft:3});
+    S.dueQueue.push({a:a,b:b,op:op,key:k,turnsLeft:3,revenge:false});
     if(S.dueQueue.length>8) S.dueQueue.splice(0, S.dueQueue.length-8);
   }
 
@@ -646,22 +782,30 @@
 
   function nextQuestion(){
     var ready = null;
+    // Old pending reviews can be outside a newly selected course. They are
+    // intentionally skipped, while their underlying weakness data remains.
+    S.dueQueue = S.dueQueue.filter(function(it){ return questionAllowedForCourse(it,persist.course); });
     for(var i=0;i<S.dueQueue.length;i++){ S.dueQueue[i].turnsLeft -= 1; }
     for(i=0;i<S.dueQueue.length;i++){
       if(S.dueQueue[i].turnsLeft<=0){ ready = S.dueQueue.splice(i,1)[0]; break; }
     }
     var q;
     if(ready){
-      q = {a:ready.a, b:ready.b, op:ready.op, key:ready.key, fromDue:true};
+      q = {a:ready.a, b:ready.b, op:ready.op, key:ready.key, fromDue:true, revenge:!!ready.revenge};
     } else {
       var lastKey = S.current ? S.current.key : null;
-      var picked, pickedKey, attempts = 0;
-      do {
-        picked = pickWeighted(S.level);
-        pickedKey = key(picked.a,picked.b,picked.op);
-        attempts++;
-      } while(pickedKey === lastKey && attempts < 6);
-      q = {a:picked.a, b:picked.b, op:picked.op, key:pickedKey, fromDue:false};
+      var past = Math.random()<0.25 ? pickPastWeakness() : null;
+      if(past){
+        q = {a:past.a, b:past.b, op:past.op, key:past.key, fromDue:false, fromPastWeakness:true, revenge:false};
+      } else {
+        var picked, pickedKey, attempts = 0;
+        do {
+          picked = pickWeighted(S.level);
+          pickedKey = key(picked.a,picked.b,picked.op);
+          attempts++;
+        } while(pickedKey === lastKey && attempts < 6);
+        q = {a:picked.a, b:picked.b, op:picked.op, key:pickedKey, fromDue:false, revenge:false};
+      }
     }
     q.answer = computeAnswer(q);
     q.choices = makeChoices(q.answer);
@@ -672,7 +816,6 @@
 
   // ---- DOM refs ----
   var qText = document.getElementById('qText');
-  var lvBadge = document.getElementById('lvBadge');
   var comboText = document.getElementById('comboText');
   var playerName = document.getElementById('playerName');
   var playerArt = document.getElementById('playerArt');
@@ -785,6 +928,7 @@
     shiny: function(){ for(var i=0;i<6;i++){ tone(1200+i*160, i*0.05, 0.09, 'sine', 0.12); } },
     champion: function(){ [523,659,784,880,1046,1175,1318].forEach(function(f,i){ tone(f,i*0.11,0.16,'triangle',0.18); }); },
     loss: function(){ [440,392,349,294].forEach(function(f,i){ tone(f,i*0.14,0.22,'sawtooth',0.15); }); },
+    guard: function(){ tone(190,0,0.12,'triangle',0.16); tone(260,0.08,0.1,'triangle',0.11); },
     overcome: function(){ [660,880,1046].forEach(function(f,i){ tone(f,i*0.08,0.12,'triangle',0.16); }); },
     starRank: function(){ [784,988,1175,1568].forEach(function(f,i){ tone(f,i*0.09,0.14,'triangle',0.16); }); }
   };
@@ -942,9 +1086,8 @@
   }
 
   function renderQuestion(){
-    var opSym = S.current.op === '+' ? '＋' : (S.current.op === '-' ? 'ー' : '×');
+    var opSym = S.current.op === '+' ? '＋' : (S.current.op === '-' ? '−' : '×');
     qText.textContent = S.current.a + ' ' + opSym + ' ' + S.current.b + ' = ';
-    lvBadge.textContent = 'Lv.' + S.level;
     comboText.textContent = S.comboStreak>=2 ? ('🔥コンボx'+comboMultiplier(S.comboStreak)) : '';
     renderChoices();
   }
@@ -1077,7 +1220,7 @@
         var peak = persist.weaknessPeak[S.current.key] || 0;
         if(peak>=3 && persist.overcomeList.indexOf(S.current.key)===-1){
           persist.overcomeList.push(S.current.key);
-          var opLabel = S.current.op==='+' ? '＋' : (S.current.op==='-' ? 'ー' : '×');
+          var opLabel = S.current.op==='+' ? '＋' : (S.current.op==='-' ? '−' : '×');
           var label = S.current.a + opLabel + S.current.b;
           persist.overcomeHistory.push({key:S.current.key, a:S.current.a, b:S.current.b, op:S.current.op, t:Date.now()});
           S.sessionOvercome.push(label);
@@ -1095,10 +1238,14 @@
       var enemyDies = S.enemyHp<=0;
       runPlayerAttack(pattern);
       setTimeout(function(){ applyEnemyHitEffect(mult, enemyDies); }, seqDelay);
-      showFeedback(mult>1 ? ('せいかい！コンボx'+mult) : 'せいかい！', 'good');
+      showFeedback(S.current.revenge ? 'はんげき！' : (mult>1 ? ('せいかい！コンボx'+mult) : 'せいかい！'), 'good');
       if(btnEl){ btnEl.classList.add('correct'); }
 
-      if(S.correctStreak>=3){ S.level = Math.min(S.level+1,MAX_LEVEL); S.correctStreak=0; persist.level=S.level; }
+      if(S.correctStreak>=3){
+        S.level = clampLevelForCourse(S.level+1,persist.course);
+        S.correctStreak=0;
+        persist.level=S.level;
+      }
 
       saveState();
 
@@ -1125,24 +1272,36 @@
       S.sessionWrong.push({a:S.current.a,b:S.current.b,op:S.current.op,key:S.current.key});
       scheduleReview(S.current.a, S.current.b, S.current.op, S.current.key, !S.current.fromDue);
 
-      var enemyDmg = Math.max(1, S.enemyAtk + Math.floor(Math.random()*5) - 2);
+      var shielded = !S.shieldUsed;
+      var enemyDmg = shielded ? 0 : Math.max(1, S.enemyAtk + Math.floor(Math.random()*5) - 2);
+      if(shielded) S.shieldUsed = true;
       S.playerHp -= enemyDmg;
       SFX.enemyAttack();
       pulse(monsterArt, 'enemyattack');
       setTimeout(function(){
-        pulse(playerArt, 'hit');
         var c = elCenter(playerArt);
-        spawnParticle('💥', c.x-15, c.y-15, {burst:true, dur:300, life:500, size:28});
-        screenShake();
+        if(shielded){
+          SFX.guard();
+          spawnParticle('🛡️', c.x+8, c.y-18, {burst:true, dx:8, dy:-4, dur:450, life:700, size:40});
+          showAchievementToast(S.playerFighter.name + 'が まもってくれた！');
+        } else {
+          pulse(playerArt, 'hit');
+          spawnParticle('💥', c.x-15, c.y-15, {burst:true, dur:300, life:500, size:28});
+          screenShake();
+        }
       }, 180);
-      showFeedback('はずれ！', 'bad');
+      showFeedback('おしい！', 'bad');
       if(btnEl){ btnEl.classList.add('wrong'); }
       for(var i=0;i<buttons.length;i++){
         if(parseInt(buttons[i].textContent,10) === correctAns){ buttons[i].classList.add('correct'); }
         buttons[i].disabled = true;
       }
 
-      if(S.wrongStreak>=2){ S.level = Math.max(S.level-1,1); S.wrongStreak=0; persist.level=S.level; }
+      if(S.wrongStreak>=2){
+        S.level = clampLevelForCourse(S.level-1,persist.course);
+        S.wrongStreak=0;
+        persist.level=S.level;
+      }
 
       updatePlayerHpBar();
       saveState();
@@ -1278,6 +1437,7 @@
     hideAction();
     S.playerHp = S.playerHpMax;
     S.enemyHp = S.enemyHpMax;
+    S.shieldUsed = false;
     updatePlayerHpBar();
     updateEnemyHpBar();
     nextQuestion();
@@ -1303,7 +1463,8 @@
       card.type = 'button';
       var artDiv = document.createElement('div');
       artDiv.className = 'fcart';
-      artDiv.textContent = unlocked ? m.emoji : '？';
+      if(unlocked) setArt(artDiv,m,false);
+      else artDiv.textContent = '？';
       var nDiv = document.createElement('div');
       nDiv.className = 'fcname';
       nDiv.textContent = unlocked ? m.name : '？？？';
@@ -1492,7 +1653,9 @@
   function newSession(){
     if(!S.playerFighter) return;
     S.tournamentMode = false;
-    S.level = persist.level || 1;
+    persist.course = validCourseId(persist.course);
+    S.level = clampLevelForCourse(persist.level || 1,persist.course);
+    persist.level = S.level;
     S.correctStreak = 0; S.wrongStreak = 0; S.comboStreak = 0;
     S.dueQueue = [];
     S.sessionWrong = [];
@@ -1501,6 +1664,7 @@
     S.enemyQueue = pickEnemyQueue();
     S.enemyIndex = 0;
     S.lastAttackPattern = null;
+    S.shieldUsed = false;
     rollShinyForCurrentEnemy();
     S.enemyHpMax = ENEMY_HP_BY_SLOT[0];
     S.enemyHp = S.enemyHpMax;
@@ -1511,8 +1675,8 @@
     S.locked = false;
 
     var pending = persist.pendingReview || [];
-    pending.slice(0,5).forEach(function(item, idx){
-      S.dueQueue.push({a:item.a,b:item.b,op:item.op,key:item.key, turnsLeft: 2 + idx*3});
+    pending.filter(function(item){ return questionAllowedForCourse(item,persist.course); }).slice(0,5).forEach(function(item, idx){
+      S.dueQueue.push({a:item.a,b:item.b,op:item.op,key:item.key, turnsLeft: 2 + idx*3, revenge:false});
     });
     persist.pendingReview = [];
 
@@ -1532,7 +1696,9 @@
     if(!S.playerFighter) return;
     if(persist.unlocked.length < CHARACTERS.length) return;
     S.tournamentMode = true;
-    S.level = persist.level || 1;
+    persist.course = validCourseId(persist.course);
+    S.level = clampLevelForCourse(persist.level || 1,persist.course);
+    persist.level = S.level;
     S.correctStreak = 0; S.wrongStreak = 0; S.comboStreak = 0;
     S.dueQueue = [];
     S.sessionWrong = [];
@@ -1541,6 +1707,7 @@
     S.enemyQueue = pickTournamentQueue();
     S.enemyIndex = 0;
     S.lastAttackPattern = null;
+    S.shieldUsed = false;
     rollShinyForCurrentEnemy();
     S.enemyHpMax = TOURNEY_ENEMY_HP_BY_SLOT[0];
     S.enemyHp = S.enemyHpMax;
@@ -1551,8 +1718,8 @@
     S.locked = false;
 
     var pending = persist.pendingReview || [];
-    pending.slice(0,5).forEach(function(item, idx){
-      S.dueQueue.push({a:item.a,b:item.b,op:item.op,key:item.key, turnsLeft: 2 + idx*3});
+    pending.filter(function(item){ return questionAllowedForCourse(item,persist.course); }).slice(0,5).forEach(function(item, idx){
+      S.dueQueue.push({a:item.a,b:item.b,op:item.op,key:item.key, turnsLeft: 2 + idx*3, revenge:false});
     });
     persist.pendingReview = [];
 
@@ -1596,11 +1763,55 @@
   }
 
   // ---- parent panel ("おうちのひと") ----
+  function renderCourseSettings(selectedPid){
+    var profileSelect = document.getElementById('courseProfileSelect');
+    var courseSelect = document.getElementById('courseSelect');
+    selectedPid = (selectedPid==='p1' || selectedPid==='p2') ? selectedPid : profiles.current;
+    profileSelect.innerHTML = '';
+    ['p1','p2'].forEach(function(pid){
+      var opt = document.createElement('option');
+      opt.value = pid;
+      opt.textContent = profiles[pid].name;
+      profileSelect.appendChild(opt);
+    });
+    profileSelect.value = selectedPid;
+
+    var prof = profiles[selectedPid];
+    prof.course = validCourseId(prof.course);
+    prof.level = clampLevelForCourse(prof.level || 1,prof.course);
+    courseSelect.innerHTML = '';
+    COURSE_ORDER.forEach(function(cid){
+      var opt = document.createElement('option');
+      opt.value = cid;
+      opt.textContent = COURSES[cid].name;
+      courseSelect.appendChild(opt);
+    });
+    courseSelect.value = prof.course;
+    document.getElementById('parentLevelDisplay').textContent = 'いまのレベル：' + prof.level;
+  }
+
+  function handleCourseChange(){
+    var pid = document.getElementById('courseProfileSelect').value;
+    if(pid!=='p1' && pid!=='p2') return;
+    var prof = profiles[pid];
+    prof.course = validCourseId(document.getElementById('courseSelect').value);
+    prof.level = clampLevelForCourse(prof.level || 1,prof.course);
+    if(pid===profiles.current){
+      persist = prof;
+      S.level = prof.level;
+      S.dueQueue = S.dueQueue.filter(function(it){ return questionAllowedForCourse(it,prof.course); });
+    }
+    saveProfiles(profiles);
+    renderCourseSettings(pid);
+  }
+
   function renderWeaknessList(){
+    renderCourseSettings(profiles.current);
     var el = document.getElementById('weaknessList');
     var html = '<p style="margin:0 0 8px; font-weight:bold;">' + persist.name + ' のきろく</p>';
-    var entries = Object.keys(persist.weakness)
-      .map(function(k){ return {k:k, score:persist.weakness[k]}; })
+    var weaknessSummary = normalizedWeaknessSummary(persist.weakness);
+    var entries = Object.keys(weaknessSummary)
+      .map(function(k){ return {k:k, score:weaknessSummary[k]}; })
       .filter(function(e){ return e.score>0; })
       .sort(function(a,b){ return b.score-a.score; })
       .slice(0,8);
@@ -1609,7 +1820,7 @@
     } else {
       html += '<p>苦手な問題（上位）</p><table>';
       entries.forEach(function(e){
-        html += '<tr><td>'+e.k.replace('+','＋').replace('-','ー')+'</td><td style="text-align:right">スコア '+e.score+'</td></tr>';
+        html += '<tr><td>'+displayProblemKey(e.k)+'</td><td style="text-align:right">スコア '+e.score+'</td></tr>';
       });
       html += '</table>';
     }
@@ -1619,7 +1830,7 @@
       var recent = persist.overcomeHistory.slice(-5).reverse();
       html += '<table>';
       recent.forEach(function(h){
-        var lbl = h.key.replace('+','＋').replace('-','ー');
+        var lbl = displayProblemKey(h.key);
         html += '<tr><td>'+lbl+'</td></tr>';
       });
       html += '</table>';
@@ -1634,8 +1845,14 @@
     saveState();
     return JSON.stringify({
       exportedAt: new Date().toISOString(),
-      appVersion: 'v2.4',
+      appVersion: 'v2.5',
       profileName: persist.name,
+      // Display/report layer only. Raw profile weakness keys remain untouched
+      // for practice and backward-compatible restore behavior.
+      weaknessSummary: {
+        p1: normalizedWeaknessSummary(profiles.p1.weakness),
+        p2: normalizedWeaknessSummary(profiles.p2.weakness)
+      },
       profiles: profiles
     }, null, 2);
   }
@@ -1667,6 +1884,10 @@
         p1: Object.assign(defaultProfileData('プレイヤー1'), data.profiles.p1),
         p2: Object.assign(defaultProfileData('プレイヤー2'), data.profiles.p2 || {})
       };
+      profiles.p1.course = validCourseId(profiles.p1.course);
+      profiles.p2.course = validCourseId(profiles.p2.course);
+      profiles.p1.level = clampLevelForCourse(profiles.p1.level,profiles.p1.course);
+      profiles.p2.level = clampLevelForCourse(profiles.p2.level,profiles.p2.course);
       persist = profiles[profiles.current];
       saveProfiles(profiles);
       renderWeaknessList();
@@ -1765,6 +1986,10 @@
   document.getElementById('exportBtn').addEventListener('click', exportLog);
   document.getElementById('resetBtn').addEventListener('click', handleResetClick);
   document.getElementById('restoreBtn').addEventListener('click', handleRestoreClick);
+  document.getElementById('courseProfileSelect').addEventListener('change', function(){
+    renderCourseSettings(this.value);
+  });
+  document.getElementById('courseSelect').addEventListener('change', handleCourseChange);
   document.getElementById('retryBtn').addEventListener('click', goToSelect);
   document.getElementById('startBtn').addEventListener('click', newSession);
   document.getElementById('tourneyBtn').addEventListener('click', startTournament);
@@ -1790,7 +2015,12 @@
       S:S, CHARACTERS:CHARACTERS, STARTERS:STARTERS,
       newSession:newSession, goToSelect:goToSelect, goToProfileSelect:goToProfileSelect,
       enterProfile:enterProfile, startTournament:startTournament,
-      chooseAnswer:chooseAnswer, computeAnswer:computeAnswer,
+      chooseAnswer:chooseAnswer, computeAnswer:computeAnswer, nextQuestion:nextQuestion,
+      buildPool:buildPool, pickWeighted:pickWeighted, scheduleReview:scheduleReview,
+      handleVictory:handleVictory, renderSelectScreen:renderSelectScreen,
+      COURSES:COURSES, clampLevelForCourse:clampLevelForCourse,
+      levelOfProblem:levelOfProblem, questionAllowedForCourse:questionAllowedForCourse,
+      pickPastWeakness:pickPastWeakness, normalizedWeaknessSummary:normalizedWeaknessSummary,
       starRankFor:starRankFor, STRENGTH_DATA:STRENGTH_DATA,
       buildExportJSON:buildExportJSON, handleRestoreClick:handleRestoreClick,
       loadProfiles:loadProfiles, legacyToProfile:legacyToProfile, defaultProfileData:defaultProfileData,
