@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 最終更新：2026-07-22 -->
+<!-- 最終更新：2026-07-23 -->
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -231,6 +231,7 @@
   .pfart{font-size:48px; line-height:1;}
   .pfart img{width:64px; height:64px; object-fit:contain; display:block;}
   .pfname{font-size:16px; font-weight:bold;}
+  .coursebadge{font-size:11px;font-weight:bold;padding:3px 10px;border-radius:14px;background:#ffffff20;color:var(--accent2);}
   .pfedit{font-size:11px; opacity:.75; text-decoration:underline; padding:6px; display:inline-block;}
   .pfeditrow{display:flex; gap:4px;}
   .profilebar{display:flex; justify-content:space-between; align-items:center; padding:0 4px 6px; font-size:11px; opacity:.85;}
@@ -269,7 +270,9 @@
   .treasure-card .te{font-size:30px;display:block}.treasure-card .tn{font-size:10px;display:block}.treasure-card.locked{opacity:.38;filter:grayscale(1)}
   .vaultmark{position:absolute;right:3px;top:3px;font-size:14px}.raid-choice{font-size:42px;min-height:78px}
   #raidTimer{font-weight:bold;color:var(--accent2)}
-  .hiragana-q{cursor:pointer}.hiragana-q::after{content:'  🔊';font-size:20px;vertical-align:middle}
+  .hiragana-prompt{display:flex;align-items:center;justify-content:center;gap:12px;}
+  .hiragana-q{cursor:pointer;}
+  .speak-word-btn{min-width:52px;min-height:52px;border-radius:50%;border:2px solid #ffffff55;background:#ffffff18;color:#fff;font-size:30px;line-height:1;padding:4px;}
 </style>
 </head>
 <body>
@@ -286,6 +289,7 @@
     <button class="profilecard" id="profileCardP1" type="button">
       <div class="pfart" id="pfArtP1"></div>
       <div class="pfname" id="pfNameP1">プレイヤー1</div>
+      <div class="coursebadge" id="pfCourseP1">さんすう</div>
       <div class="pfeditrow">
         <span class="pfedit" id="pfEditP1">✎ なまえ</span>
         <span class="pfedit" id="pfIconBtnP1">🔄 アイコン</span>
@@ -294,6 +298,7 @@
     <button class="profilecard" id="profileCardP2" type="button">
       <div class="pfart" id="pfArtP2"></div>
       <div class="pfname" id="pfNameP2">プレイヤー2</div>
+      <div class="coursebadge" id="pfCourseP2">さんすう</div>
       <div class="pfeditrow">
         <span class="pfedit" id="pfEditP2">✎ なまえ</span>
         <span class="pfedit" id="pfIconBtnP2">🔄 アイコン</span>
@@ -339,7 +344,7 @@
 <div id="raidOverlay" class="overlay hidden">
   <div class="panel" style="text-align:center;">
     <div id="raidTimer">のこり 60びょう</div><div id="raidCount" style="font-size:12px;margin:5px;"></div>
-    <div class="qtext" id="raidQuestion">?</div><div class="choicegrid" id="raidChoices" style="margin-top:12px;"></div>
+    <div class="hiragana-prompt"><div class="qtext" id="raidQuestion">?</div><button class="speak-word-btn hidden" id="raidSpeakBtn" type="button" aria-label="もういちど きく">🔊</button></div><div class="choicegrid" id="raidChoices" style="margin-top:12px;"></div>
   </div>
 </div>
 
@@ -375,7 +380,7 @@
   </div>
 
   <div class="qcard" style="position:relative;">
-    <div class="qtext" id="qText">?</div>
+    <div class="hiragana-prompt"><div class="qtext" id="qText">?</div><button class="speak-word-btn hidden" id="questionSpeakBtn" type="button" aria-label="もういちど きく">🔊</button></div>
     <div class="feedback" id="feedback"></div>
   </div>
 
@@ -435,6 +440,7 @@
       <div class="course-row"><label for="courseProfileSelect">プロフィール</label><select id="courseProfileSelect"></select></div>
       <div class="course-row"><label for="courseTypeSelect">コース種別</label><select id="courseTypeSelect"><option value="math">さんすう</option><option value="hiragana">ひらがな</option></select></div>
       <div class="course-row"><label for="courseSelect">いまのコース</label><select id="courseSelect"></select></div>
+      <div class="course-row" id="autoSpeakRow"><label for="autoSpeakSelect">じどうよみあげ</label><select id="autoSpeakSelect"><option value="1">ON</option><option value="0">OFF</option></select></div>
       <div id="parentLevelDisplay" style="margin-top:7px; opacity:.8;"></div>
     </div>
     <div id="weaknessList" style="font-size:13px; opacity:.85;">読み込み中…</div>
@@ -860,9 +866,18 @@
     return {mode:'hiragana',word:correct.word,emoji:correct.emoji,key:'h:'+correct.word,answer:correct.emoji,choices:choices,revenge:false};
   }
 
+  var AUTO_SPEAK_KEY='mathBattle_autoSpeak';
+  var autoSpeakOn=true, speechUnlocked=false;
+  try{autoSpeakOn=localStorage.getItem(AUTO_SPEAK_KEY)!=='0';}catch(e){}
+  function setAutoSpeak(v){autoSpeakOn=!!v;try{localStorage.setItem(AUTO_SPEAK_KEY,autoSpeakOn?'1':'0');}catch(e){}}
+  function unlockSpeech(){
+    if(speechUnlocked)return;
+    try{if(window.speechSynthesis){window.speechSynthesis.cancel();var silent=new SpeechSynthesisUtterance('');silent.lang='ja-JP';silent.volume=0;window.speechSynthesis.speak(silent);speechUnlocked=true;}}catch(e){}
+  }
   function speakWord(word){
     try{if(window.speechSynthesis){window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(word);u.lang='ja-JP';u.rate=.8;window.speechSynthesis.speak(u);}}catch(e){}
   }
+  function autoSpeakWord(word){if(autoSpeakOn)speakWord(word);}
 
   function nextQuestion(){
     if(persist.courseType==='hiragana'){
@@ -1173,12 +1188,15 @@
   }
 
   function renderQuestion(){
+    var speakBtn=document.getElementById('questionSpeakBtn');
     if(S.current.mode==='hiragana'){
       qText.textContent=S.current.word; qText.classList.add('hiragana-q');
-      qText.onclick=function(){speakWord(S.current.word);}; comboText.textContent=S.comboStreak>=2?('🔥コンボx'+comboMultiplier(S.comboStreak)):'';
-      renderChoices(); return;
+      qText.onclick=function(){speakWord(S.current.word);};
+      speakBtn.classList.remove('hidden');speakBtn.onclick=function(){speakWord(S.current.word);};
+      comboText.textContent=S.comboStreak>=2?('🔥コンボx'+comboMultiplier(S.comboStreak)):'';
+      renderChoices();autoSpeakWord(S.current.word);return;
     }
-    qText.classList.remove('hiragana-q'); qText.onclick=null;
+    qText.classList.remove('hiragana-q');qText.onclick=null;speakBtn.classList.add('hidden');speakBtn.onclick=null;
     var opSym = S.current.op === '+' ? '＋' : (S.current.op === '-' ? '−' : '×');
     qText.textContent = S.current.a + ' ' + opSym + ' ' + S.current.b + ' = ';
     comboText.textContent = S.comboStreak>=2 ? ('🔥コンボx'+comboMultiplier(S.comboStreak)) : '';
@@ -1335,6 +1353,7 @@
       runPlayerAttack(pattern);
       setTimeout(function(){ applyEnemyHitEffect(mult, enemyDies); }, seqDelay);
       showFeedback(S.current.revenge ? 'はんげき！' : (mult>1 ? ('せいかい！コンボx'+mult) : 'せいかい！'), 'good');
+      if(isH)autoSpeakWord('せいかい。'+S.current.word);
       if(btnEl){ btnEl.classList.add('correct'); }
 
       if(S.correctStreak>=3){
@@ -1406,6 +1425,7 @@
 
       revealAnswer.textContent = isH ? (S.current.word+' '+correctAns) : String(correctAns);
       revealOverlay.classList.remove('hidden');
+      if(isH)autoSpeakWord(S.current.word);
       setTimeout(function(){
         revealOverlay.classList.add('hidden');
         if(S.playerHp<=0){
@@ -1675,7 +1695,9 @@
       var prof = profiles[pid];
       var nameEl = document.getElementById(pid==='p1' ? 'pfNameP1' : 'pfNameP2');
       var artEl = document.getElementById(pid==='p1' ? 'pfArtP1' : 'pfArtP2');
+      var courseEl = document.getElementById(pid==='p1' ? 'pfCourseP1' : 'pfCourseP2');
       nameEl.textContent = prof.name + (prof.kingTitle ? ' 👑' : '') + (prof.kaitouTitle?' 🗝️':'');
+      courseEl.textContent=prof.courseType==='hiragana'?'ひらがな':'さんすう';
       var iconChar = (prof.iconId && CHAR_BY_ID[prof.iconId]) ? CHAR_BY_ID[prof.iconId] : CHAR_BY_ID[STARTERS[0]];
       setArt(artEl, iconChar, false);
     });
@@ -1778,6 +1800,7 @@
 
   function newSession(){
     if(!S.playerFighter) return;
+    if(persist.courseType==='hiragana')unlockSpeech();
     S.tournamentMode = false;
     persist.course = validCourseId(persist.course);
     S.level = persist.courseType==='hiragana' ? Math.max(1,Math.min(3,persist.level||1)) : clampLevelForCourse(persist.level || 1,persist.course);
@@ -1821,6 +1844,7 @@
   function startTournament(){
     if(!S.playerFighter) return;
     if(persist.unlocked.length < CHARACTERS.length) return;
+    if(persist.courseType==='hiragana')unlockSpeech();
     S.tournamentMode = true;
     persist.course = validCourseId(persist.course);
     S.level = persist.courseType==='hiragana' ? Math.max(1,Math.min(3,persist.level||1)) : clampLevelForCourse(persist.level || 1,persist.course);
@@ -1922,6 +1946,7 @@
     var target=profiles[targetPid];ensureRaidDay(persist);
     if(!isRevenge&&persist.raidsToday>=3)return;
     if(ownedTreasureCount(target,treasureId)<1||target.vaultId===treasureId)return;
+    if(persist.courseType==='hiragana')unlockSpeech();
     if(isRevenge)persist.revengeCredit=null;else persist.raidsToday++;
     saveState();document.getElementById('kaitouOverlay').classList.add('hidden');document.getElementById('raidOverlay').classList.remove('hidden');
     raidState={targetPid:targetPid,treasureId:treasureId,isRevenge:isRevenge,asked:0,correct:0,ends:Date.now()+60000};
@@ -1929,8 +1954,10 @@
   }
   function nextRaidQuestion(){if(!raidState||raidState.asked>=5){finishRaid();return;}raidState.q=raidQuestion();raidState.asked++;
     document.getElementById('raidCount').textContent=raidState.asked+'/5もん　せいかい '+raidState.correct;
-    var q=raidState.q,rq=document.getElementById('raidQuestion');rq.textContent=q.mode==='hiragana'?q.word:(q.a+' '+(q.op==='-'?'−':q.op)+' '+q.b+' =');rq.className='qtext'+(q.mode==='hiragana'?' hiragana-q':'');rq.onclick=q.mode==='hiragana'?function(){speakWord(q.word);}:null;
-    var box=document.getElementById('raidChoices');box.innerHTML='';q.choices.forEach(function(c){var v=q.mode==='hiragana'?c.emoji:c,b=document.createElement('button');b.className='choice'+(q.mode==='hiragana'?' raid-choice':'');b.textContent=String(v);b.addEventListener('click',function(){if(v===q.answer)raidState.correct++;nextRaidQuestion();});box.appendChild(b);});
+    var q=raidState.q,rq=document.getElementById('raidQuestion'),speakBtn=document.getElementById('raidSpeakBtn');rq.textContent=q.mode==='hiragana'?q.word:(q.a+' '+(q.op==='-'?'−':q.op)+' '+q.b+' =');rq.className='qtext'+(q.mode==='hiragana'?' hiragana-q':'');rq.onclick=q.mode==='hiragana'?function(){speakWord(q.word);}:null;
+    speakBtn.classList.toggle('hidden',q.mode!=='hiragana');speakBtn.onclick=q.mode==='hiragana'?function(){speakWord(q.word);}:null;
+    var box=document.getElementById('raidChoices');box.innerHTML='';q.choices.forEach(function(c){var v=q.mode==='hiragana'?c.emoji:c,b=document.createElement('button');b.className='choice'+(q.mode==='hiragana'?' raid-choice':'');b.textContent=String(v);b.addEventListener('click',function(){var good=v===q.answer;if(good)raidState.correct++;if(q.mode==='hiragana'){Array.prototype.forEach.call(box.querySelectorAll('.choice'),function(x){x.disabled=true;});b.classList.add(good?'correct':'wrong');autoSpeakWord(good?('せいかい。'+q.word):q.word);setTimeout(nextRaidQuestion,900);}else{nextRaidQuestion();}});box.appendChild(b);});
+    if(q.mode==='hiragana')autoSpeakWord(q.word);
   }
   function finishRaid(){if(!raidState)return;if(raidTimer){clearInterval(raidTimer);raidTimer=null;}var rs=raidState;raidState=null;document.getElementById('raidOverlay').classList.add('hidden');var target=profiles[rs.targetPid],success=rs.correct>=4&&ownedTreasureCount(target,rs.treasureId)>0&&target.vaultId!==rs.treasureId,t=TREASURE_BY_ID[rs.treasureId];
     if(success){target.treasures[t.id]--;grantTreasure(persist,t.id);addRaidLog(persist,target.name+'から '+t.name+'を てにいれた');addRaidLog(target,persist.name+'に '+t.name+'を とられた');target.revengeCredit={against:profiles.current,treasureId:t.id};}
@@ -1957,6 +1984,8 @@
     prof.courseType=prof.courseType==='hiragana'?'hiragana':'math';
     courseTypeSelect.value=prof.courseType;
     courseSelect.parentNode.style.display=prof.courseType==='hiragana'?'none':'flex';
+    document.getElementById('autoSpeakRow').style.display=prof.courseType==='hiragana'?'flex':'none';
+    document.getElementById('autoSpeakSelect').value=autoSpeakOn?'1':'0';
     prof.course = validCourseId(prof.course);
     prof.level = prof.courseType==='hiragana'?Math.max(1,Math.min(3,prof.level||1)):clampLevelForCourse(prof.level || 1,prof.course);
     courseSelect.innerHTML = '';
@@ -1977,6 +2006,8 @@
     if(pid===profiles.current){persist=prof;S.level=prof.level;S.dueQueue=[];}
     saveProfiles(profiles);renderCourseSettings(pid);
   }
+
+  function handleAutoSpeakChange(){setAutoSpeak(document.getElementById('autoSpeakSelect').value!=='0');}
 
   function handleCourseChange(){
     var pid = document.getElementById('courseProfileSelect').value;
@@ -2179,6 +2210,7 @@
   });
   document.getElementById('courseSelect').addEventListener('change', handleCourseChange);
   document.getElementById('courseTypeSelect').addEventListener('change', handleCourseTypeChange);
+  document.getElementById('autoSpeakSelect').addEventListener('change',handleAutoSpeakChange);
   document.getElementById('kaitouBtn').addEventListener('click',openKaitou);
   document.getElementById('treasureBookBtn').addEventListener('click',openTreasureBook);
   document.getElementById('closeKaitouBtn').addEventListener('click',function(){document.getElementById('kaitouOverlay').classList.add('hidden');});
@@ -2217,12 +2249,14 @@
       starRankFor:starRankFor, STRENGTH_DATA:STRENGTH_DATA,
       buildExportJSON:buildExportJSON, handleRestoreClick:handleRestoreClick,
       TREASURES:TREASURES, HIRAGANA_WORDS:HIRAGANA_WORDS, makeHiraganaQuestion:makeHiraganaQuestion,
-      startRaid:startRaid, finishRaid:finishRaid, grantTreasure:grantTreasure, ensureRaidDay:ensureRaidDay, escapeHTML:escapeHTML,
+      startRaid:startRaid, finishRaid:finishRaid, nextRaidQuestion:nextRaidQuestion, grantTreasure:grantTreasure, ensureRaidDay:ensureRaidDay, escapeHTML:escapeHTML,
+      speakWord:speakWord, setAutoSpeak:setAutoSpeak, unlockSpeech:unlockSpeech,
       loadProfiles:loadProfiles, legacyToProfile:legacyToProfile, defaultProfileData:defaultProfileData,
       // persist/profiles get reassigned wholesale on profile switch/reset,
       // so expose them via getters rather than snapshot references.
       get persist(){ return persist; },
-      get profiles(){ return profiles; }
+      get profiles(){ return profiles; },
+      get autoSpeakOn(){return autoSpeakOn;}
     };
   }
 })();
