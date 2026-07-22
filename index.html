@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 最終更新：2026-07-14 -->
+<!-- 最終更新：2026-07-22 -->
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -264,6 +264,12 @@
     width:100%; font-size:11px; border-radius:8px; padding:6px; background:#00000030; color:#fff;
     border:1px solid #ffffff30; font-family:inherit;
   }
+  .kaitou-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0;}
+  .treasure-card{background:#ffffff12;border:1px solid #ffffff2b;border-radius:12px;padding:9px 4px;text-align:center;min-height:76px;color:#fff;position:relative;}
+  .treasure-card .te{font-size:30px;display:block}.treasure-card .tn{font-size:10px;display:block}.treasure-card.locked{opacity:.38;filter:grayscale(1)}
+  .vaultmark{position:absolute;right:3px;top:3px;font-size:14px}.raid-choice{font-size:42px;min-height:78px}
+  #raidTimer{font-weight:bold;color:var(--accent2)}
+  .hiragana-q{cursor:pointer}.hiragana-q::after{content:'  🔊';font-size:20px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -310,7 +316,31 @@
   <div class="fightergrid" id="fighterGrid"></div>
   <button class="bigbtn" id="startBtn" disabled>たたかう！</button>
   <button class="bigbtn" id="tourneyBtn" disabled style="background:linear-gradient(135deg,#ffd23d,#ff7b3d); display:none; margin-top:8px;">👑さいきょうおう けっていせん</button>
+  <button class="bigbtn" id="kaitouBtn" style="background:linear-gradient(135deg,#4b2a78,#b84791); margin-top:8px;">🗝️ かいとうモード</button>
+  <button class="linkbtn" id="treasureBookBtn" style="align-self:center;margin-top:8px;">おたからずかん</button>
   <button class="homelink" id="gearBtnSelect" style="align-self:center;">おうちのひと</button>
+</div>
+
+<div id="kaitouOverlay" class="overlay hidden">
+  <div class="panel">
+    <h3 style="text-align:center;margin-bottom:6px;">🗝️ かいとうモード</h3>
+    <div id="raidStatus" style="text-align:center;font-size:13px;"></div>
+    <div id="raidTargetArea" class="panelbtns"></div>
+    <div style="font-size:12px;opacity:.8;margin-top:12px;">かいとうニュース</div>
+    <div id="kaitouNews" style="font-size:11px;max-height:120px;overflow:auto;"></div>
+    <button class="closepanel" id="closeKaitouBtn">とじる</button>
+  </div>
+</div>
+
+<div id="treasureOverlay" class="overlay hidden">
+  <div class="panel"><h3 style="text-align:center;">おたからずかん</h3><div id="treasureGrid" class="kaitou-grid"></div><div id="treasureProgress" style="text-align:center;font-size:12px;"></div><button class="closepanel" id="closeTreasureBtn">とじる</button></div>
+</div>
+
+<div id="raidOverlay" class="overlay hidden">
+  <div class="panel" style="text-align:center;">
+    <div id="raidTimer">のこり 60びょう</div><div id="raidCount" style="font-size:12px;margin:5px;"></div>
+    <div class="qtext" id="raidQuestion">?</div><div class="choicegrid" id="raidChoices" style="margin-top:12px;"></div>
+  </div>
 </div>
 
 <div id="screen-game" class="screen hidden" style="position:relative;">
@@ -403,6 +433,7 @@
     <h3>おうちのひと</h3>
     <div class="course-settings">
       <div class="course-row"><label for="courseProfileSelect">プロフィール</label><select id="courseProfileSelect"></select></div>
+      <div class="course-row"><label for="courseTypeSelect">コース種別</label><select id="courseTypeSelect"><option value="math">さんすう</option><option value="hiragana">ひらがな</option></select></div>
       <div class="course-row"><label for="courseSelect">いまのコース</label><select id="courseSelect"></select></div>
       <div id="parentLevelDisplay" style="margin-top:7px; opacity:.8;"></div>
     </div>
@@ -449,6 +480,28 @@
   var CHAR_BY_ID = {};
   CHARACTERS.forEach(function(c){ CHAR_BY_ID[c.id] = c; });
 
+  var TREASURES = [
+    {id:'dino_fang',set:0,name:'きょうりゅうの きば',emoji:'🦷',rare:false},{id:'dino_bone',set:0,name:'ふしぎな ほね',emoji:'🦴',rare:false},{id:'dino_egg',set:0,name:'きょうりゅうの たまご',emoji:'🥚',rare:true},
+    {id:'sea_pearl',set:1,name:'ひかる しんじゅ',emoji:'⚪',rare:false},{id:'sea_shell',set:1,name:'にじいろ かいがら',emoji:'🐚',rare:false},{id:'sea_amber',set:1,name:'うみの こはく',emoji:'🔶',rare:true},
+    {id:'forest_honey',set:2,name:'もりの はちみつ',emoji:'🍯',rare:false},{id:'forest_berry',set:2,name:'ふしぎな きのみ',emoji:'🫐',rare:false},{id:'forest_sap',set:2,name:'いのちの じゅえき',emoji:'💧',rare:true},
+    {id:'gold_coin',set:3,name:'おうごんの コイン',emoji:'🪙',rare:false},{id:'silver_star',set:3,name:'ぎんの ほし',emoji:'⭐',rare:false},{id:'diamond',set:3,name:'にじの ダイヤ',emoji:'💎',rare:true}
+  ];
+  var TREASURE_BY_ID={}; TREASURES.forEach(function(t){TREASURE_BY_ID[t.id]=t;});
+  var HIRAGANA_WORDS = [
+    ['うし','🐄','どうぶつ',1],['いぬ','🐕','どうぶつ',1],['ねこ','🐈','どうぶつ',1],['さる','🐒','どうぶつ',1],['ぶた','🐖','どうぶつ',1],
+    ['くま','🐻','どうぶつ',1],['しか','🦌','どうぶつ',1],['うま','🐎','どうぶつ',1],['とり','🐦','どうぶつ',1],['かめ','🐢','どうぶつ',1],
+    ['なし','🍐','たべもの',1],['もも','🍑','たべもの',1],['すし','🍣','たべもの',1],['ぱん','🍞','たべもの',1],['にく','🍖','たべもの',1],
+    ['ばす','🚌','のりもの',1],['ふね','🚢','のりもの',1],['そり','🛷','のりもの',1],['いえ','🏠','みのまわり',1],['かさ','☂️','みのまわり',1],
+    ['りんご','🍎','たべもの',2],['ばなな','🍌','たべもの',2],['みかん','🍊','たべもの',2],['いちご','🍓','たべもの',2],['おにぎり','🍙','たべもの',2],
+    ['きりん','🦒','どうぶつ',2],['うさぎ','🐇','どうぶつ',2],['ぱんだ','🐼','どうぶつ',2],['こあら','🐨','どうぶつ',2],['ひつじ','🐑','どうぶつ',2],
+    ['くるま','🚗','のりもの',2],['でんしゃ','🚃','のりもの',2],['じてんしゃ','🚲','のりもの',2],['ひこうき','✈️','のりもの',2],['ろけっと','🚀','のりもの',2],
+    ['えんぴつ','✏️','みのまわり',2],['はさみ','✂️','みのまわり',2],['とけい','🕐','みのまわり',2],['かばん','🎒','みのまわり',2],['ぼうし','🧢','みのまわり',2],
+    ['ぞう','🐘','どうぶつ',3],['ごりら','🦍','どうぶつ',3],['ぺんぎん','🐧','どうぶつ',3],['わに','🐊','どうぶつ',3],['けむし','🐛','どうぶつ',3],
+    ['さくらんぼ','🍒','たべもの',3],['ぶどう','🍇','たべもの',3],['はんばーがー','🍔','たべもの',3],['あいすくりーむ','🍨','たべもの',3],['とうもろこし','🌽','たべもの',3],
+    ['しょうぼうしゃ','🚒','のりもの',3],['きゅうきゅうしゃ','🚑','のりもの',3],['ぱとかー','🚓','のりもの',3],['へりこぷたー','🚁','のりもの',3],['しんかんせん','🚄','のりもの',3],
+    ['でんきゅう','💡','みのまわり',3],['かぎ','🔑','みのまわり',3],['はぶらし','🪥','みのまわり',3],['ぷれぜんと','🎁','みのまわり',3],['けいたいでんわ','📱','みのまわり',3]
+  ].map(function(w){return {word:w[0],emoji:w[1],category:w[2],level:w[3]};});
+
   // ---- v2.4: per-profile data layer ----
   // Each profile holds a full copy of what used to be the single flat
   // "persist" object. `persist` (below) is a live reference into
@@ -460,6 +513,7 @@
       iconId: null,
       level: 1,
       course: 'c0',
+      courseType: 'math',
       weakness: {},
       weaknessPeak: {},
       overcomeList: [],
@@ -469,8 +523,19 @@
       unlocked: STARTERS.slice(),
       shiny: [],
       wins: {},
-      kingTitle: false
+      kingTitle: false,
+      treasures: {}, vaultId: null, raidsToday: 0, lastRaidDate: '', revengeCredit: null,
+      kaitouLog: [], treasureBadges: [], kaitouTitle: false
     };
+  }
+
+  function normalizeProfile(raw,name){
+    var p=Object.assign(defaultProfileData(name),raw||{});
+    p.courseType=p.courseType==='hiragana'?'hiragana':'math';
+    p.treasures=(p.treasures&&typeof p.treasures==='object')?p.treasures:{};
+    p.kaitouLog=Array.isArray(p.kaitouLog)?p.kaitouLog.slice(-10):[];
+    p.treasureBadges=Array.isArray(p.treasureBadges)?p.treasureBadges:[];
+    return p;
   }
 
   // Convert a legacy (pre-v2.4) flat mathBattle_v2 payload into the new
@@ -505,8 +570,8 @@
           var needsCourseMigration = !parsed.p1.course || !parsed.p2 || !parsed.p2.course;
           // merge with defaults so newly-added fields (future versions)
           // always exist even on an older saved profiles blob.
-          parsed.p1 = Object.assign(defaultProfileData('プレイヤー1'), parsed.p1);
-          parsed.p2 = Object.assign(defaultProfileData('プレイヤー2'), parsed.p2 || {});
+          parsed.p1 = normalizeProfile(parsed.p1,'プレイヤー1');
+          parsed.p2 = normalizeProfile(parsed.p2,'プレイヤー2');
           if(!parsed.current || (parsed.current!=='p1' && parsed.current!=='p2')) parsed.current = 'p1';
           // v2.5 migration: only add the default course. No existing field or
           // legacy key is removed or rewritten.
@@ -582,6 +647,7 @@
   };
 
   function key(a,b,op){ return a+op+b; }
+  function escapeHTML(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 
   // ---- v2.5: per-profile learning courses ----
   var COURSES = {
@@ -780,7 +846,28 @@
     return set;
   }
 
+  function hiraganaLevel(){ return Math.max(1,Math.min(3,parseInt(S.level,10)||1)); }
+  function makeHiraganaQuestion(){
+    var level=hiraganaLevel(), pool=HIRAGANA_WORDS.filter(function(w){return w.level<=level;});
+    var total=0, weights=pool.map(function(w){var x=1+Math.min(persist.weakness['h:'+w.word]||0,20);total+=x;return x;});
+    var r=Math.random()*total, correct=pool[0];
+    for(var i=0;i<pool.length;i++){r-=weights[i];if(r<=0){correct=pool[i];break;}}
+    var same=HIRAGANA_WORDS.filter(function(w){return w.category===correct.category&&w.word!==correct.word;});
+    var other=HIRAGANA_WORDS.filter(function(w){return w.category!==correct.category;});
+    function take(arr){return arr.splice(Math.floor(Math.random()*arr.length),1)[0];}
+    var choices=[correct,take(same),take(same),take(other)];
+    for(i=choices.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),tmp=choices[i];choices[i]=choices[j];choices[j]=tmp;}
+    return {mode:'hiragana',word:correct.word,emoji:correct.emoji,key:'h:'+correct.word,answer:correct.emoji,choices:choices,revenge:false};
+  }
+
+  function speakWord(word){
+    try{if(window.speechSynthesis){window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(word);u.lang='ja-JP';u.rate=.8;window.speechSynthesis.speak(u);}}catch(e){}
+  }
+
   function nextQuestion(){
+    if(persist.courseType==='hiragana'){
+      S.current=makeHiraganaQuestion(); S.locked=false; renderQuestion(); return;
+    }
     var ready = null;
     // Old pending reviews can be outside a newly selected course. They are
     // intentionally skipped, while their underlying weakness data remains.
@@ -1086,6 +1173,12 @@
   }
 
   function renderQuestion(){
+    if(S.current.mode==='hiragana'){
+      qText.textContent=S.current.word; qText.classList.add('hiragana-q');
+      qText.onclick=function(){speakWord(S.current.word);}; comboText.textContent=S.comboStreak>=2?('🔥コンボx'+comboMultiplier(S.comboStreak)):'';
+      renderChoices(); return;
+    }
+    qText.classList.remove('hiragana-q'); qText.onclick=null;
     var opSym = S.current.op === '+' ? '＋' : (S.current.op === '-' ? '−' : '×');
     qText.textContent = S.current.a + ' ' + opSym + ' ' + S.current.b + ' = ';
     comboText.textContent = S.comboStreak>=2 ? ('🔥コンボx'+comboMultiplier(S.comboStreak)) : '';
@@ -1098,9 +1191,11 @@
       var btn = document.createElement('button');
       btn.className = 'choice';
       btn.type = 'button';
-      btn.textContent = String(val);
+      var answerVal = S.current.mode==='hiragana' ? val.emoji : val;
+      btn.textContent = String(answerVal);
+      if(S.current.mode==='hiragana') btn.style.fontSize='42px';
       btn.disabled = false;
-      btn.addEventListener('click', function(){ chooseAnswer(val, btn); });
+      btn.addEventListener('click', function(){ chooseAnswer(answerVal, btn); });
       choiceGrid.appendChild(btn);
     });
   }
@@ -1205,6 +1300,7 @@
     S.locked = true;
     var correctAns = S.current.answer;
     var good = (val === correctAns);
+    var isH = S.current.mode==='hiragana';
     S.totalQuestions++;
 
     var buttons = choiceGrid.querySelectorAll('.choice');
@@ -1216,7 +1312,7 @@
 
       // 9.3: overcome-badge detection -- a problem whose score ever reached
       // >=3 and has now been brought back down to 0 counts as "overcome".
-      if(persist.weakness[S.current.key]===0){
+      if(!isH && persist.weakness[S.current.key]===0){
         var peak = persist.weaknessPeak[S.current.key] || 0;
         if(peak>=3 && persist.overcomeList.indexOf(S.current.key)===-1){
           persist.overcomeList.push(S.current.key);
@@ -1242,7 +1338,7 @@
       if(btnEl){ btnEl.classList.add('correct'); }
 
       if(S.correctStreak>=3){
-        S.level = clampLevelForCourse(S.level+1,persist.course);
+        S.level = isH ? Math.min(3,S.level+1) : clampLevelForCourse(S.level+1,persist.course);
         S.correctStreak=0;
         persist.level=S.level;
       }
@@ -1268,9 +1364,11 @@
         var oIdx = persist.overcomeList.indexOf(S.current.key);
         if(oIdx!==-1) persist.overcomeList.splice(oIdx,1);
       }
-      persist.wrongLog.push({t:Date.now(), a:S.current.a, b:S.current.b, op:S.current.op, ans:correctAns, user:val, level:S.level});
-      S.sessionWrong.push({a:S.current.a,b:S.current.b,op:S.current.op,key:S.current.key});
-      scheduleReview(S.current.a, S.current.b, S.current.op, S.current.key, !S.current.fromDue);
+      persist.wrongLog.push(isH ? {t:Date.now(),word:S.current.word,ans:correctAns,user:val,level:S.level,type:'hiragana'} : {t:Date.now(), a:S.current.a, b:S.current.b, op:S.current.op, ans:correctAns, user:val, level:S.level});
+      if(!isH){
+        S.sessionWrong.push({a:S.current.a,b:S.current.b,op:S.current.op,key:S.current.key});
+        scheduleReview(S.current.a, S.current.b, S.current.op, S.current.key, !S.current.fromDue);
+      }
 
       var shielded = !S.shieldUsed;
       var enemyDmg = shielded ? 0 : Math.max(1, S.enemyAtk + Math.floor(Math.random()*5) - 2);
@@ -1293,12 +1391,12 @@
       showFeedback('おしい！', 'bad');
       if(btnEl){ btnEl.classList.add('wrong'); }
       for(var i=0;i<buttons.length;i++){
-        if(parseInt(buttons[i].textContent,10) === correctAns){ buttons[i].classList.add('correct'); }
+        if((isH ? buttons[i].textContent===String(correctAns) : parseInt(buttons[i].textContent,10)===correctAns)){ buttons[i].classList.add('correct'); }
         buttons[i].disabled = true;
       }
 
       if(S.wrongStreak>=2){
-        S.level = clampLevelForCourse(S.level-1,persist.course);
+        S.level = isH ? Math.max(1,S.level-1) : clampLevelForCourse(S.level-1,persist.course);
         S.wrongStreak=0;
         persist.level=S.level;
       }
@@ -1306,7 +1404,7 @@
       updatePlayerHpBar();
       saveState();
 
-      revealAnswer.textContent = String(correctAns);
+      revealAnswer.textContent = isH ? (S.current.word+' '+correctAns) : String(correctAns);
       revealOverlay.classList.remove('hidden');
       setTimeout(function(){
         revealOverlay.classList.add('hidden');
@@ -1341,6 +1439,28 @@
     actionOverlay.classList.add('hidden');
   }
 
+  function ownedTreasureCount(p,id){return Math.max(0,parseInt((p.treasures||{})[id],10)||0);}
+  function grantTreasure(p,id){p.treasures[id]=ownedTreasureCount(p,id)+1;checkTreasureRewards(p);}
+  function checkTreasureRewards(p){
+    for(var set=0;set<4;set++){
+      var complete=TREASURES.filter(function(t){return t.set===set;}).every(function(t){return ownedTreasureCount(p,t.id)>0;});
+      if(complete&&p.treasureBadges.indexOf(set)===-1){
+        p.treasureBadges.push(set);
+        var unlock=CHARACTERS.find(function(c){return p.unlocked.indexOf(c.id)!==-1&&p.shiny.indexOf(c.id)===-1;});
+        if(unlock)p.shiny.push(unlock.id);
+        showAchievementToast('🗝️ おたからセット かんせい！'+(unlock?' ✨'+unlock.name:'') );
+      }
+    }
+    if(p.treasureBadges.length>=4)p.kaitouTitle=true;
+  }
+  function rollTreasureDrop(){
+    if(Math.random()>=.5)return null;
+    var missing=TREASURES.filter(function(t){return ownedTreasureCount(persist,t.id)===0;});
+    var pool=missing.length?missing:TREASURES,total=0,weights=pool.map(function(t){var w=t.rare ? .35 : 1;total+=w;return w;});
+    var r=Math.random()*total,pick=pool[0];for(var i=0;i<pool.length;i++){r-=weights[i];if(r<=0){pick=pool[i];break;}}
+    grantTreasure(persist,pick.id);return pick;
+  }
+
   function handleVictory(){
     S.winsThisSession++;
     var beaten = S.enemyQueue[S.enemyIndex];
@@ -1359,8 +1479,10 @@
     var newWins = prevWins + 1;
     persist.wins[fid] = newWins;
     var starUp = starRankFor(newWins) > starRankFor(prevWins);
+    var treasureDrop = rollTreasureDrop();
 
     saveState();
+    if(treasureDrop)setTimeout(function(){showAchievementToast('🎁 '+treasureDrop.name+'を みつけた！');},500);
     if(isNew && !shinyNew) SFX.newZukan();
     if(starUp && starRankFor(newWins)===3){
       SFX.starRank();
@@ -1452,7 +1574,7 @@
     var tourneyBtn = document.getElementById('tourneyBtn');
     tourneyBtn.disabled = true;
     tourneyBtn.style.display = (persist.unlocked.length >= CHARACTERS.length) ? '' : 'none';
-    document.getElementById('profileNameDisplay').textContent = persist.name + (persist.kingTitle ? ' 👑' : '');
+    document.getElementById('profileNameDisplay').textContent = persist.name + (persist.kingTitle ? ' 👑' : '') + (persist.kaitouTitle?' 🗝️':'');
     zukanProgress.textContent = 'ずかん ' + persist.unlocked.length + '/' + CHARACTERS.length +
       '　✨いろちがい ' + persist.shiny.length + '/' + CHARACTERS.length;
     CHARACTERS.forEach(function(m){
@@ -1553,7 +1675,7 @@
       var prof = profiles[pid];
       var nameEl = document.getElementById(pid==='p1' ? 'pfNameP1' : 'pfNameP2');
       var artEl = document.getElementById(pid==='p1' ? 'pfArtP1' : 'pfArtP2');
-      nameEl.textContent = prof.name + (prof.kingTitle ? ' 👑' : '');
+      nameEl.textContent = prof.name + (prof.kingTitle ? ' 👑' : '') + (prof.kaitouTitle?' 🗝️':'');
       var iconChar = (prof.iconId && CHAR_BY_ID[prof.iconId]) ? CHAR_BY_ID[prof.iconId] : CHAR_BY_ID[STARTERS[0]];
       setArt(artEl, iconChar, false);
     });
@@ -1575,6 +1697,10 @@
     saveProfiles(profiles);
     document.getElementById('screen-profile').classList.add('hidden');
     goToSelect();
+    if(persist.revengeCredit){
+      var attacker=profiles[persist.revengeCredit.against];
+      setTimeout(function(){showAction({title:'おたからニュース',body:attacker.name+'に おたからを とられた！',btn1:{label:'リベンジする',onClick:function(){hideAction();openKaitou();}},btn2:{label:'あとで',onClick:hideAction}});},50);
+    }
   }
 
   function wireProfileEdit(pid, editElId){
@@ -1654,7 +1780,7 @@
     if(!S.playerFighter) return;
     S.tournamentMode = false;
     persist.course = validCourseId(persist.course);
-    S.level = clampLevelForCourse(persist.level || 1,persist.course);
+    S.level = persist.courseType==='hiragana' ? Math.max(1,Math.min(3,persist.level||1)) : clampLevelForCourse(persist.level || 1,persist.course);
     persist.level = S.level;
     S.correctStreak = 0; S.wrongStreak = 0; S.comboStreak = 0;
     S.dueQueue = [];
@@ -1675,7 +1801,7 @@
     S.locked = false;
 
     var pending = persist.pendingReview || [];
-    pending.filter(function(item){ return questionAllowedForCourse(item,persist.course); }).slice(0,5).forEach(function(item, idx){
+    pending.filter(function(item){ return persist.courseType!=='hiragana' && questionAllowedForCourse(item,persist.course); }).slice(0,5).forEach(function(item, idx){
       S.dueQueue.push({a:item.a,b:item.b,op:item.op,key:item.key, turnsLeft: 2 + idx*3, revenge:false});
     });
     persist.pendingReview = [];
@@ -1697,7 +1823,7 @@
     if(persist.unlocked.length < CHARACTERS.length) return;
     S.tournamentMode = true;
     persist.course = validCourseId(persist.course);
-    S.level = clampLevelForCourse(persist.level || 1,persist.course);
+    S.level = persist.courseType==='hiragana' ? Math.max(1,Math.min(3,persist.level||1)) : clampLevelForCourse(persist.level || 1,persist.course);
     persist.level = S.level;
     S.correctStreak = 0; S.wrongStreak = 0; S.comboStreak = 0;
     S.dueQueue = [];
@@ -1718,7 +1844,7 @@
     S.locked = false;
 
     var pending = persist.pendingReview || [];
-    pending.filter(function(item){ return questionAllowedForCourse(item,persist.course); }).slice(0,5).forEach(function(item, idx){
+    pending.filter(function(item){ return persist.courseType!=='hiragana' && questionAllowedForCourse(item,persist.course); }).slice(0,5).forEach(function(item, idx){
       S.dueQueue.push({a:item.a,b:item.b,op:item.op,key:item.key, turnsLeft: 2 + idx*3, revenge:false});
     });
     persist.pendingReview = [];
@@ -1762,10 +1888,61 @@
     playBgm('home');
   }
 
+  // ---- v3.0: treasure book and same-device asynchronous raid mode ----
+  function todayKey(){var d=new Date(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return d.getFullYear()+'-'+m+'-'+day;}
+  function ensureRaidDay(p){if(p.lastRaidDate!==todayKey()){p.lastRaidDate=todayKey();p.raidsToday=0;}}
+  function otherPid(pid){return pid==='p1'?'p2':'p1';}
+  function renderTreasureBook(){
+    var grid=document.getElementById('treasureGrid');grid.innerHTML='';
+    TREASURES.forEach(function(t){var n=ownedTreasureCount(persist,t.id),b=document.createElement('button');b.type='button';b.className='treasure-card'+(n?'':' locked');
+      var em=document.createElement('span');em.className='te';em.textContent=n?t.emoji:'？';var nm=document.createElement('span');nm.className='tn';nm.textContent=n?(t.name+(n>1?' ×'+n:'')):'？？？';b.appendChild(em);b.appendChild(nm);
+      if(persist.vaultId===t.id){var v=document.createElement('span');v.className='vaultmark';v.textContent='🔒';b.appendChild(v);}
+      b.disabled=!n;b.addEventListener('click',function(){persist.vaultId=persist.vaultId===t.id?null:t.id;saveState();renderTreasureBook();});grid.appendChild(b);
+    });
+    document.getElementById('treasureProgress').textContent='セット '+persist.treasureBadges.length+'/4　（もっているカードをタップすると きんこ）'+(persist.kaitouTitle?'　🗝️でんせつのかいとう':'');
+  }
+  function openTreasureBook(){renderTreasureBook();document.getElementById('treasureOverlay').classList.remove('hidden');}
+  function addRaidLog(p,text){p.kaitouLog.push({t:Date.now(),text:text});p.kaitouLog=p.kaitouLog.slice(-10);}
+  function renderKaitou(){
+    ensureRaidDay(persist);saveState();var targetId=otherPid(profiles.current),target=profiles[targetId],area=document.getElementById('raidTargetArea');area.innerHTML='';
+    document.getElementById('raidStatus').textContent='きょうの のこり '+Math.max(0,3-persist.raidsToday)+'かい　／　あいて：'+target.name;
+    var stealable=TREASURES.filter(function(t){return ownedTreasureCount(target,t.id)>0&&target.vaultId!==t.id;});
+    if(persist.raidsToday<3&&stealable.length){stealable.forEach(function(t){var b=document.createElement('button');b.textContent=t.emoji+' '+t.name+'を ねらう';b.addEventListener('click',function(){startRaid(targetId,t.id,false);});area.appendChild(b);});}
+    else {var p=document.createElement('div');p.textContent=persist.raidsToday>=3?'きょうの ちょうせんは おしまい':'うばえる おたからが ありません';area.appendChild(p);}
+    if(persist.revengeCredit){var rb=document.createElement('button');rb.textContent='🔥 '+profiles[persist.revengeCredit.against].name+'に リベンジ';rb.addEventListener('click',function(){var against=persist.revengeCredit.against,tp=profiles[against];var cand=TREASURES.find(function(t){return ownedTreasureCount(tp,t.id)>0&&tp.vaultId!==t.id;});if(cand)startRaid(against,cand.id,true);});area.insertBefore(rb,area.firstChild);}
+    var news=document.getElementById('kaitouNews');news.innerHTML='';(persist.kaitouLog||[]).slice().reverse().forEach(function(x){var d=document.createElement('div');d.textContent=new Date(x.t).toLocaleString()+'　'+x.text;news.appendChild(d);});
+  }
+  function openKaitou(){renderKaitou();document.getElementById('kaitouOverlay').classList.remove('hidden');}
+  var raidState=null,raidTimer=null;
+  function raidQuestion(){
+    if(persist.courseType==='hiragana')return makeHiraganaQuestion();
+    var level=clampLevelForCourse(persist.level||1,persist.course),q=pickWeighted(level),ans=computeAnswer(q);return {mode:'math',a:q.a,b:q.b,op:q.op,answer:ans,choices:makeChoices(ans)};
+  }
+  function startRaid(targetPid,treasureId,isRevenge){
+    var target=profiles[targetPid];ensureRaidDay(persist);
+    if(!isRevenge&&persist.raidsToday>=3)return;
+    if(ownedTreasureCount(target,treasureId)<1||target.vaultId===treasureId)return;
+    if(isRevenge)persist.revengeCredit=null;else persist.raidsToday++;
+    saveState();document.getElementById('kaitouOverlay').classList.add('hidden');document.getElementById('raidOverlay').classList.remove('hidden');
+    raidState={targetPid:targetPid,treasureId:treasureId,isRevenge:isRevenge,asked:0,correct:0,ends:Date.now()+60000};
+    if(raidTimer)clearInterval(raidTimer);raidTimer=setInterval(function(){var left=Math.max(0,Math.ceil((raidState.ends-Date.now())/1000));document.getElementById('raidTimer').textContent='のこり '+left+'びょう';if(left<=0)finishRaid();},250);nextRaidQuestion();
+  }
+  function nextRaidQuestion(){if(!raidState||raidState.asked>=5){finishRaid();return;}raidState.q=raidQuestion();raidState.asked++;
+    document.getElementById('raidCount').textContent=raidState.asked+'/5もん　せいかい '+raidState.correct;
+    var q=raidState.q,rq=document.getElementById('raidQuestion');rq.textContent=q.mode==='hiragana'?q.word:(q.a+' '+(q.op==='-'?'−':q.op)+' '+q.b+' =');rq.className='qtext'+(q.mode==='hiragana'?' hiragana-q':'');rq.onclick=q.mode==='hiragana'?function(){speakWord(q.word);}:null;
+    var box=document.getElementById('raidChoices');box.innerHTML='';q.choices.forEach(function(c){var v=q.mode==='hiragana'?c.emoji:c,b=document.createElement('button');b.className='choice'+(q.mode==='hiragana'?' raid-choice':'');b.textContent=String(v);b.addEventListener('click',function(){if(v===q.answer)raidState.correct++;nextRaidQuestion();});box.appendChild(b);});
+  }
+  function finishRaid(){if(!raidState)return;if(raidTimer){clearInterval(raidTimer);raidTimer=null;}var rs=raidState;raidState=null;document.getElementById('raidOverlay').classList.add('hidden');var target=profiles[rs.targetPid],success=rs.correct>=4&&ownedTreasureCount(target,rs.treasureId)>0&&target.vaultId!==rs.treasureId,t=TREASURE_BY_ID[rs.treasureId];
+    if(success){target.treasures[t.id]--;grantTreasure(persist,t.id);addRaidLog(persist,target.name+'から '+t.name+'を てにいれた');addRaidLog(target,persist.name+'に '+t.name+'を とられた');target.revengeCredit={against:profiles.current,treasureId:t.id};}
+    else {addRaidLog(persist,target.name+'への ちょうせんは しっぱい');addRaidLog(target,persist.name+'の ちょうせんを まもった');}
+    saveProfiles(profiles);showAction({title:success?'かいとう せいこう！':'おしい！ しっぱい',body:success?(t.emoji+' '+t.name):'🛡️',btn1:{label:'もどる',onClick:function(){hideAction();goToSelect();}}});
+  }
+
   // ---- parent panel ("おうちのひと") ----
   function renderCourseSettings(selectedPid){
     var profileSelect = document.getElementById('courseProfileSelect');
     var courseSelect = document.getElementById('courseSelect');
+    var courseTypeSelect = document.getElementById('courseTypeSelect');
     selectedPid = (selectedPid==='p1' || selectedPid==='p2') ? selectedPid : profiles.current;
     profileSelect.innerHTML = '';
     ['p1','p2'].forEach(function(pid){
@@ -1777,8 +1954,11 @@
     profileSelect.value = selectedPid;
 
     var prof = profiles[selectedPid];
+    prof.courseType=prof.courseType==='hiragana'?'hiragana':'math';
+    courseTypeSelect.value=prof.courseType;
+    courseSelect.parentNode.style.display=prof.courseType==='hiragana'?'none':'flex';
     prof.course = validCourseId(prof.course);
-    prof.level = clampLevelForCourse(prof.level || 1,prof.course);
+    prof.level = prof.courseType==='hiragana'?Math.max(1,Math.min(3,prof.level||1)):clampLevelForCourse(prof.level || 1,prof.course);
     courseSelect.innerHTML = '';
     COURSE_ORDER.forEach(function(cid){
       var opt = document.createElement('option');
@@ -1788,6 +1968,14 @@
     });
     courseSelect.value = prof.course;
     document.getElementById('parentLevelDisplay').textContent = 'いまのレベル：' + prof.level;
+  }
+
+  function handleCourseTypeChange(){
+    var pid=document.getElementById('courseProfileSelect').value;if(pid!=='p1'&&pid!=='p2')return;
+    var prof=profiles[pid]; prof.courseType=document.getElementById('courseTypeSelect').value==='hiragana'?'hiragana':'math';
+    prof.level=prof.courseType==='hiragana'?Math.max(1,Math.min(3,prof.level||1)):clampLevelForCourse(prof.level||1,prof.course);
+    if(pid===profiles.current){persist=prof;S.level=prof.level;S.dueQueue=[];}
+    saveProfiles(profiles);renderCourseSettings(pid);
   }
 
   function handleCourseChange(){
@@ -1808,7 +1996,7 @@
   function renderWeaknessList(){
     renderCourseSettings(profiles.current);
     var el = document.getElementById('weaknessList');
-    var html = '<p style="margin:0 0 8px; font-weight:bold;">' + persist.name + ' のきろく</p>';
+    var html = '<p style="margin:0 0 8px; font-weight:bold;">' + escapeHTML(persist.name) + ' のきろく</p>';
     var weaknessSummary = normalizedWeaknessSummary(persist.weakness);
     var entries = Object.keys(weaknessSummary)
       .map(function(k){ return {k:k, score:weaknessSummary[k]}; })
@@ -1820,7 +2008,7 @@
     } else {
       html += '<p>苦手な問題（上位）</p><table>';
       entries.forEach(function(e){
-        html += '<tr><td>'+displayProblemKey(e.k)+'</td><td style="text-align:right">スコア '+e.score+'</td></tr>';
+        html += '<tr><td>'+escapeHTML(displayProblemKey(e.k))+'</td><td style="text-align:right">スコア '+escapeHTML(e.score)+'</td></tr>';
       });
       html += '</table>';
     }
@@ -1831,7 +2019,7 @@
       html += '<table>';
       recent.forEach(function(h){
         var lbl = displayProblemKey(h.key);
-        html += '<tr><td>'+lbl+'</td></tr>';
+        html += '<tr><td>'+escapeHTML(lbl)+'</td></tr>';
       });
       html += '</table>';
     }
@@ -1845,7 +2033,7 @@
     saveState();
     return JSON.stringify({
       exportedAt: new Date().toISOString(),
-      appVersion: 'v2.5',
+      appVersion: 'v3.0',
       profileName: persist.name,
       // Display/report layer only. Raw profile weakness keys remain untouched
       // for practice and backward-compatible restore behavior.
@@ -1881,8 +2069,8 @@
       btn.textContent = 'ふっこくする';
       profiles = {
         current: (data.profiles.current==='p1'||data.profiles.current==='p2') ? data.profiles.current : 'p1',
-        p1: Object.assign(defaultProfileData('プレイヤー1'), data.profiles.p1),
-        p2: Object.assign(defaultProfileData('プレイヤー2'), data.profiles.p2 || {})
+        p1: normalizeProfile(data.profiles.p1,'プレイヤー1'),
+        p2: normalizeProfile(data.profiles.p2 || {},'プレイヤー2')
       };
       profiles.p1.course = validCourseId(profiles.p1.course);
       profiles.p2.course = validCourseId(profiles.p2.course);
@@ -1990,6 +2178,11 @@
     renderCourseSettings(this.value);
   });
   document.getElementById('courseSelect').addEventListener('change', handleCourseChange);
+  document.getElementById('courseTypeSelect').addEventListener('change', handleCourseTypeChange);
+  document.getElementById('kaitouBtn').addEventListener('click',openKaitou);
+  document.getElementById('treasureBookBtn').addEventListener('click',openTreasureBook);
+  document.getElementById('closeKaitouBtn').addEventListener('click',function(){document.getElementById('kaitouOverlay').classList.add('hidden');});
+  document.getElementById('closeTreasureBtn').addEventListener('click',function(){document.getElementById('treasureOverlay').classList.add('hidden');});
   document.getElementById('retryBtn').addEventListener('click', goToSelect);
   document.getElementById('startBtn').addEventListener('click', newSession);
   document.getElementById('tourneyBtn').addEventListener('click', startTournament);
@@ -2023,6 +2216,8 @@
       pickPastWeakness:pickPastWeakness, normalizedWeaknessSummary:normalizedWeaknessSummary,
       starRankFor:starRankFor, STRENGTH_DATA:STRENGTH_DATA,
       buildExportJSON:buildExportJSON, handleRestoreClick:handleRestoreClick,
+      TREASURES:TREASURES, HIRAGANA_WORDS:HIRAGANA_WORDS, makeHiraganaQuestion:makeHiraganaQuestion,
+      startRaid:startRaid, finishRaid:finishRaid, grantTreasure:grantTreasure, ensureRaidDay:ensureRaidDay, escapeHTML:escapeHTML,
       loadProfiles:loadProfiles, legacyToProfile:legacyToProfile, defaultProfileData:defaultProfileData,
       // persist/profiles get reassigned wholesale on profile switch/reset,
       // so expose them via getters rather than snapshot references.
