@@ -273,6 +273,18 @@
   .hiragana-prompt{display:flex;align-items:center;justify-content:center;gap:12px;}
   .hiragana-q{cursor:pointer;}
   .speak-word-btn{min-width:52px;min-height:52px;border-radius:50%;border:2px solid #ffffff55;background:#ffffff18;color:#fff;font-size:30px;line-height:1;padding:4px;}
+  .raid-feedback{min-height:32px;margin-top:8px;font-size:22px;font-weight:bold;color:var(--accent2);}
+  .raid-result-card{text-align:center;overflow:hidden;}
+  .raid-result-text{font-size:27px;font-weight:bold;color:var(--accent2);text-shadow:0 2px 8px #000;margin:8px 0;}
+  .raid-loot-card{font-size:100px;line-height:1.15;margin:18px auto 8px;filter:drop-shadow(0 8px 12px #0008);}
+  .raid-sparkles{font-size:32px;letter-spacing:12px;animation:raidsparkle .45s ease-in-out infinite alternate;}
+  .raid-result-card.success .raid-loot-card{animation:stealfly 1.7s ease-in-out forwards;}
+  .raid-result-card.fail .raid-loot-card{animation:escapefade .8s ease-out forwards;}
+  @keyframes stealfly{0%{transform:translateX(0) scale(.5) rotate(-8deg);opacity:0}22%{transform:translateX(0) scale(1.25) rotate(5deg);opacity:1}55%{transform:translateX(0) scale(1);opacity:1}100%{transform:translateX(-42vw) scale(.25) rotate(-18deg);opacity:0}}
+  @keyframes escapefade{0%{transform:translateX(0) scale(1);opacity:1}100%{transform:translateX(38vw) scale(.55);opacity:0}}
+  @keyframes raidsparkle{from{transform:scale(.85);opacity:.5}to{transform:scale(1.15);opacity:1}}
+  .stolen-card{font-size:94px;text-align:center;margin:12px 0;filter:drop-shadow(0 7px 10px #0008);animation:shake .6s ease-out;}
+  .stolen-message{font-size:24px;font-weight:bold;text-align:center;color:var(--accent2);line-height:1.4;}
 </style>
 </head>
 <body>
@@ -344,8 +356,16 @@
 <div id="raidOverlay" class="overlay hidden">
   <div class="panel" style="text-align:center;">
     <div id="raidTimer">のこり 60びょう</div><div id="raidCount" style="font-size:12px;margin:5px;"></div>
-    <div class="hiragana-prompt"><div class="qtext" id="raidQuestion">?</div><button class="speak-word-btn hidden" id="raidSpeakBtn" type="button" aria-label="もういちど きく">🔊</button></div><div class="choicegrid" id="raidChoices" style="margin-top:12px;"></div>
+    <div class="hiragana-prompt"><div class="qtext" id="raidQuestion">?</div><button class="speak-word-btn hidden" id="raidSpeakBtn" type="button" aria-label="もういちど きく">🔊</button></div><div id="raidFeedback" class="raid-feedback"></div><div class="choicegrid" id="raidChoices" style="margin-top:12px;"></div>
   </div>
+</div>
+
+<div id="raidResultOverlay" class="overlay hidden">
+  <div class="panel raid-result-card" id="raidResultCard"><div class="raid-result-text" id="raidResultText"></div><div class="raid-loot-card" id="raidResultEmoji">🎁</div><div class="raid-sparkles" id="raidSparkles">✨ ✨ ✨</div><div id="raidResultName" style="font-size:16px;font-weight:bold;"></div></div>
+</div>
+
+<div id="stolenNoticeOverlay" class="overlay hidden">
+  <div class="panel"><div class="actiontitle">⚠️ おたからニュース ⚠️</div><div class="stolen-card" id="stolenNoticeEmoji">🎁</div><div class="stolen-message" id="stolenNoticeMessage"></div><div id="stolenNoticeName" style="text-align:center;margin:8px 0;font-weight:bold;"></div><button class="bigbtn" id="stolenRevengeBtn">🔥 リベンジする！</button><button class="bigbtn" id="stolenLaterBtn" style="background:#ffffff20;margin-top:8px;">あとで</button></div>
 </div>
 
 <div id="screen-game" class="screen hidden" style="position:relative;">
@@ -1721,8 +1741,19 @@
     goToSelect();
     if(persist.revengeCredit){
       var attacker=profiles[persist.revengeCredit.against];
-      setTimeout(function(){showAction({title:'おたからニュース',body:attacker.name+'に おたからを とられた！',btn1:{label:'リベンジする',onClick:function(){hideAction();openKaitou();}},btn2:{label:'あとで',onClick:hideAction}});},50);
+      var stolen=TREASURE_BY_ID[persist.revengeCredit.treasureId];
+      setTimeout(function(){showStolenNotice(attacker,stolen);},50);
     }
+  }
+
+  function showStolenNotice(attacker,treasure){
+    document.getElementById('stolenNoticeEmoji').textContent=treasure?treasure.emoji:'🎁';
+    document.getElementById('stolenNoticeName').textContent=treasure?treasure.name:'';
+    document.getElementById('stolenNoticeMessage').textContent=(attacker?attacker.name:'だれか')+'に おたからを とられた！';
+    document.getElementById('stolenRevengeBtn').onclick=function(){document.getElementById('stolenNoticeOverlay').classList.add('hidden');openKaitou();};
+    document.getElementById('stolenLaterBtn').onclick=function(){document.getElementById('stolenNoticeOverlay').classList.add('hidden');};
+    document.getElementById('stolenNoticeOverlay').classList.remove('hidden');
+    SFX.enemyAttack();
   }
 
   function wireProfileEdit(pid, editElId){
@@ -1952,17 +1983,44 @@
     raidState={targetPid:targetPid,treasureId:treasureId,isRevenge:isRevenge,asked:0,correct:0,ends:Date.now()+60000};
     if(raidTimer)clearInterval(raidTimer);raidTimer=setInterval(function(){var left=Math.max(0,Math.ceil((raidState.ends-Date.now())/1000));document.getElementById('raidTimer').textContent='のこり '+left+'びょう';if(left<=0)finishRaid();},250);nextRaidQuestion();
   }
-  function nextRaidQuestion(){if(!raidState||raidState.asked>=5){finishRaid();return;}raidState.q=raidQuestion();raidState.asked++;
+  function nextRaidQuestion(){if(!raidState||raidState.asked>=5){finishRaid();return;}raidState.q=raidQuestion();raidState.asked++;raidState.answering=false;
     document.getElementById('raidCount').textContent=raidState.asked+'/5もん　せいかい '+raidState.correct;
     var q=raidState.q,rq=document.getElementById('raidQuestion'),speakBtn=document.getElementById('raidSpeakBtn');rq.textContent=q.mode==='hiragana'?q.word:(q.a+' '+(q.op==='-'?'−':q.op)+' '+q.b+' =');rq.className='qtext'+(q.mode==='hiragana'?' hiragana-q':'');rq.onclick=q.mode==='hiragana'?function(){speakWord(q.word);}:null;
     speakBtn.classList.toggle('hidden',q.mode!=='hiragana');speakBtn.onclick=q.mode==='hiragana'?function(){speakWord(q.word);}:null;
-    var box=document.getElementById('raidChoices');box.innerHTML='';q.choices.forEach(function(c){var v=q.mode==='hiragana'?c.emoji:c,b=document.createElement('button');b.className='choice'+(q.mode==='hiragana'?' raid-choice':'');b.textContent=String(v);b.addEventListener('click',function(){var good=v===q.answer;if(good)raidState.correct++;if(q.mode==='hiragana'){Array.prototype.forEach.call(box.querySelectorAll('.choice'),function(x){x.disabled=true;});b.classList.add(good?'correct':'wrong');autoSpeakWord(good?('せいかい。'+q.word):q.word);setTimeout(nextRaidQuestion,900);}else{nextRaidQuestion();}});box.appendChild(b);});
+    var feedback=document.getElementById('raidFeedback');feedback.textContent='';
+    var box=document.getElementById('raidChoices');box.innerHTML='';q.choices.forEach(function(c){var v=q.mode==='hiragana'?c.emoji:c,b=document.createElement('button');b.className='choice'+(q.mode==='hiragana'?' raid-choice':'');b.textContent=String(v);b.addEventListener('click',function(){handleRaidAnswer(q,v,b,box);});box.appendChild(b);});
     if(q.mode==='hiragana')autoSpeakWord(q.word);
+  }
+  function handleRaidAnswer(q,value,button,box){
+    if(!raidState||raidState.answering)return;raidState.answering=true;
+    var good=value===q.answer,buttons=box.querySelectorAll('.choice');
+    Array.prototype.forEach.call(buttons,function(x){x.disabled=true;});
+    button.classList.add(good?'correct':'wrong');
+    if(good){raidState.correct++;document.getElementById('raidFeedback').textContent='せいかい！';}
+    else{
+      Array.prototype.forEach.call(buttons,function(x){if(x.textContent===String(q.answer))x.classList.add('correct');});
+      document.getElementById('raidFeedback').textContent='こたえは '+q.answer;
+    }
+    if(q.mode==='hiragana')autoSpeakWord(good?('せいかい。'+q.word):q.word);
+    setTimeout(nextRaidQuestion,900);
+  }
+  var raidResultTimer=null;
+  function showRaidResult(success,treasure){
+    var overlay=document.getElementById('raidResultOverlay'),card=document.getElementById('raidResultCard');
+    if(raidResultTimer)clearTimeout(raidResultTimer);
+    document.getElementById('raidResultText').textContent=success?'⚡おたからを うばった！':'💨 にげられた…';
+    document.getElementById('raidResultEmoji').textContent=success&&treasure?treasure.emoji:'💨';
+    document.getElementById('raidResultName').textContent=success&&treasure?treasure.name:'';
+    document.getElementById('raidSparkles').classList.toggle('hidden',!success);
+    card.className='panel raid-result-card '+(success?'success':'fail');void card.offsetWidth;
+    overlay.classList.remove('hidden');
+    if(success){SFX.victory();SFX.shiny();}else{SFX.wrong();}
+    raidResultTimer=setTimeout(function(){overlay.classList.add('hidden');raidResultTimer=null;goToSelect();},success?1800:800);
   }
   function finishRaid(){if(!raidState)return;if(raidTimer){clearInterval(raidTimer);raidTimer=null;}var rs=raidState;raidState=null;document.getElementById('raidOverlay').classList.add('hidden');var target=profiles[rs.targetPid],success=rs.correct>=4&&ownedTreasureCount(target,rs.treasureId)>0&&target.vaultId!==rs.treasureId,t=TREASURE_BY_ID[rs.treasureId];
     if(success){target.treasures[t.id]--;grantTreasure(persist,t.id);addRaidLog(persist,target.name+'から '+t.name+'を てにいれた');addRaidLog(target,persist.name+'に '+t.name+'を とられた');target.revengeCredit={against:profiles.current,treasureId:t.id};}
     else {addRaidLog(persist,target.name+'への ちょうせんは しっぱい');addRaidLog(target,persist.name+'の ちょうせんを まもった');}
-    saveProfiles(profiles);showAction({title:success?'かいとう せいこう！':'おしい！ しっぱい',body:success?(t.emoji+' '+t.name):'🛡️',btn1:{label:'もどる',onClick:function(){hideAction();goToSelect();}}});
+    saveProfiles(profiles);showRaidResult(success,t);
   }
 
   // ---- parent panel ("おうちのひと") ----
@@ -2249,7 +2307,7 @@
       starRankFor:starRankFor, STRENGTH_DATA:STRENGTH_DATA,
       buildExportJSON:buildExportJSON, handleRestoreClick:handleRestoreClick,
       TREASURES:TREASURES, HIRAGANA_WORDS:HIRAGANA_WORDS, makeHiraganaQuestion:makeHiraganaQuestion,
-      startRaid:startRaid, finishRaid:finishRaid, nextRaidQuestion:nextRaidQuestion, grantTreasure:grantTreasure, ensureRaidDay:ensureRaidDay, escapeHTML:escapeHTML,
+      startRaid:startRaid, finishRaid:finishRaid, nextRaidQuestion:nextRaidQuestion, handleRaidAnswer:handleRaidAnswer, showRaidResult:showRaidResult, showStolenNotice:showStolenNotice, grantTreasure:grantTreasure, ensureRaidDay:ensureRaidDay, escapeHTML:escapeHTML,
       speakWord:speakWord, setAutoSpeak:setAutoSpeak, unlockSpeech:unlockSpeech,
       loadProfiles:loadProfiles, legacyToProfile:legacyToProfile, defaultProfileData:defaultProfileData,
       // persist/profiles get reassigned wholesale on profile switch/reset,
