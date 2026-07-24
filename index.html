@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 最終更新：2026-07-23 -->
+<!-- 最終更新：2026-07-25 -->
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -285,11 +285,32 @@
   @keyframes raidsparkle{from{transform:scale(.85);opacity:.5}to{transform:scale(1.15);opacity:1}}
   .stolen-card{font-size:94px;text-align:center;margin:12px 0;filter:drop-shadow(0 7px 10px #0008);animation:shake .6s ease-out;}
   .stolen-message{font-size:24px;font-weight:bold;text-align:center;color:var(--accent2);line-height:1.4;}
+  /* ---- v3.3: character / treasure get celebration ---- */
+  .bgm-credit{position:absolute;left:0;right:0;bottom:7px;z-index:2;text-align:center;font-size:10px;color:#fff;opacity:.55;pointer-events:none;}
+  .get-celebration{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none;background:radial-gradient(circle at center,#fff8bf42 0%,#ffd83b18 31%,transparent 66%);}
+  .get-celebration.hidden{display:none;}
+  .get-celebration.show{animation:getscene 2.8s ease-out both;}
+  .get-burst{position:absolute;width:min(88vw,420px);aspect-ratio:1;border-radius:50%;background:repeating-conic-gradient(from 0deg,#fff8 0 5deg,transparent 5deg 14deg);filter:drop-shadow(0 0 20px #ffe15e);animation:getburst 2.8s ease-out both;}
+  .get-items{position:relative;z-index:2;display:flex;justify-content:center;align-items:center;gap:14px;max-width:92vw;}
+  .get-item{min-width:132px;max-width:190px;padding:13px 10px 11px;border-radius:22px;text-align:center;color:#3b2100;background:linear-gradient(150deg,#fff,#fff8d6);border:4px solid #ffd94d;box-shadow:0 12px 34px #0008,0 0 28px #fff9;animation:getcard 2.8s cubic-bezier(.2,.8,.2,1) both;}
+  .get-visual{height:132px;display:flex;align-items:center;justify-content:center;font-size:96px;line-height:1;}
+  .get-visual img{width:132px;height:132px;object-fit:contain;display:block;}
+  .get-label{font-size:15px;font-weight:bold;line-height:1.35;text-shadow:0 1px #fff;}
+  .get-confetti{position:absolute;z-index:3;width:10px;height:18px;border-radius:2px;animation:confettifall 2.5s ease-out both;}
+  @keyframes getscene{0%{opacity:0}9%,80%{opacity:1}100%{opacity:0}}
+  @keyframes getburst{0%{opacity:0;transform:scale(.15) rotate(0)}25%{opacity:1;transform:scale(1) rotate(15deg)}100%{opacity:0;transform:scale(1.35) rotate(36deg)}}
+  @keyframes getcard{0%{opacity:0;transform:translateY(55px) scale(.25) rotate(-7deg)}22%{opacity:1;transform:translateY(-8px) scale(1.12) rotate(2deg)}40%,78%{opacity:1;transform:translateY(0) scale(1) rotate(0)}100%{opacity:0;transform:translateY(-18px) scale(.94)}}
+  @keyframes confettifall{0%{opacity:0;transform:translateY(-16vh) rotate(0)}12%{opacity:1}100%{opacity:0;transform:translateY(105vh) rotate(720deg)}}
+  @media(max-width:430px){.get-items{gap:7px}.get-item{min-width:112px;max-width:46vw;padding:9px 6px}.get-visual{height:108px;font-size:80px}.get-visual img{width:108px;height:108px}.get-label{font-size:13px}}
 </style>
 </head>
 <body>
 
 <div id="achievementToast" class="achievement-toast"></div>
+<div id="getCelebration" class="get-celebration hidden" aria-live="polite">
+  <div class="get-burst"></div>
+  <div id="getItems" class="get-items"></div>
+</div>
 
 <div id="screen-profile" class="screen hidden">
   <div class="topbar">
@@ -317,6 +338,7 @@
       </div>
     </button>
   </div>
+  <div class="bgm-credit">BGM：魔王魂</div>
 </div>
 
 <div id="screen-select" class="screen">
@@ -475,7 +497,7 @@
       <textarea id="restoreInput" rows="3" placeholder="ここに書き出したJSONを貼り付けてください"></textarea>
       <button id="restoreBtn" style="margin-top:6px; width:100%; background:#ffffff14; border:1px solid #ffffff30; color:#fff; padding:10px; border-radius:10px; min-height:44px; font-size:14px;">ふっこくする</button>
     </div>
-    <div style="font-size:10px; opacity:.6; margin-top:16px; text-align:center;">BGM：バトル曲＝魔王魂／ホーム・図鑑曲＝DOVA-SYNDROME</div>
+    <div style="font-size:10px; opacity:.6; margin-top:16px; text-align:center;">BGM：魔王魂</div>
     <button class="closepanel" id="closePanelBtn">とじる</button>
   </div>
 </div>
@@ -984,7 +1006,11 @@
     soundOn = v;
     try{ localStorage.setItem('mathBattle_sound', v ? '1' : '0'); }catch(e){}
     updateSoundButtons();
-    if(!v){ stopBgm(); } else { playBgm(desiredBgm); }
+    if(!v){
+      stopBgm();
+      if(victoryAudio){ try{ victoryAudio.pause(); victoryAudio.currentTime=0; }catch(e){} }
+      if(victoryResumeTimer){ clearTimeout(victoryResumeTimer); victoryResumeTimer=null; }
+    } else { playBgm(desiredBgm); }
   }
 
   function tone(freq, startTime, dur, type, gainPeak){
@@ -1091,12 +1117,18 @@
     titanoboa:{power:9990, trivia:'でんせつの だいじゃ。バスより ながい！'}
   };
 
-  // ---- v2.4: BGM (real audio files, only these two -- everything else stays WebAudio SFX) ----
-  var BGM_FILES = { battle: 'sounds/bgm_battle.mp3', home: 'sounds/bgm_home.mp3' };
+  // ---- v3.3: MaouDamashii BGM + victory jingle ----
+  var BGM_FILES = {
+    battle: 'sounds/bgm_battle_v2.mp3',
+    home: 'sounds/bgm_opening.mp3',
+    victory: 'sounds/jingle_victory.mp3'
+  };
   var bgmAudio = { battle:null, home:null };
   var bgmFailed = {};
   var currentBgm = null;
   var desiredBgm = 'home';
+  var victoryAudio = null;
+  var victoryResumeTimer = null;
   function getBgmAudio(name){
     if(bgmFailed[name]) return null;
     if(bgmAudio[name]) return bgmAudio[name];
@@ -1131,6 +1163,85 @@
         p.catch(function(){ currentBgm = null; /* blocked until a real user gesture; next nav retries */ });
       }
     }catch(e){ currentBgm = null; }
+  }
+
+  function playVictoryJingle(){
+    if(!soundOn) return;
+    var resumeTarget = desiredBgm || 'home';
+    stopBgm();
+    try{
+      if(typeof Audio === 'undefined'){ playBgm(resumeTarget); return; }
+      if(!victoryAudio){
+        victoryAudio = new Audio(BGM_FILES.victory);
+        victoryAudio.loop = false;
+        victoryAudio.volume = 0.55;
+      }
+      if(victoryResumeTimer) clearTimeout(victoryResumeTimer);
+      victoryAudio.pause();
+      victoryAudio.currentTime = 0;
+      var resumed = false;
+      var resumeBgm = function(){
+        if(resumed) return;
+        resumed = true;
+        if(victoryResumeTimer){ clearTimeout(victoryResumeTimer); victoryResumeTimer=null; }
+        victoryAudio.onended = null;
+        victoryAudio.onerror = null;
+        if(soundOn) playBgm(resumeTarget);
+      };
+      victoryAudio.onended = resumeBgm;
+      victoryAudio.onerror = resumeBgm;
+      victoryResumeTimer = setTimeout(resumeBgm, 5000);
+      var p = victoryAudio.play();
+      if(p && typeof p.catch === 'function') p.catch(resumeBgm);
+    }catch(e){ playBgm(resumeTarget); }
+  }
+
+  var getCelebrationTimer = null;
+  function showGetCelebration(items){
+    if(!items || !items.length) return;
+    var overlay = document.getElementById('getCelebration');
+    var itemsBox = document.getElementById('getItems');
+    if(!overlay || !itemsBox) return;
+    if(getCelebrationTimer) clearTimeout(getCelebrationTimer);
+    itemsBox.innerHTML = '';
+    items.forEach(function(item){
+      var card = document.createElement('div');
+      card.className = 'get-item';
+      var visual = document.createElement('div');
+      visual.className = 'get-visual';
+      if(item.kind === 'character' && item.character){
+        setArt(visual, item.character, !!item.shiny);
+      }else{
+        visual.textContent = item.emoji || '🎁';
+      }
+      var label = document.createElement('div');
+      label.className = 'get-label';
+      label.textContent = item.label || 'ゲット！';
+      card.appendChild(visual);
+      card.appendChild(label);
+      itemsBox.appendChild(card);
+    });
+    Array.prototype.slice.call(overlay.querySelectorAll('.get-confetti')).forEach(function(x){ x.remove(); });
+    var colors = ['#ff4f68','#ffd83d','#55dbff','#70e06a','#bd78ff','#ffffff'];
+    for(var i=0;i<34;i++){
+      var confetti = document.createElement('i');
+      confetti.className = 'get-confetti';
+      confetti.style.left = (Math.random()*100)+'vw';
+      confetti.style.top = (-8-Math.random()*25)+'vh';
+      confetti.style.background = colors[i%colors.length];
+      confetti.style.animationDelay = (Math.random()*.45)+'s';
+      confetti.style.transform = 'rotate('+(Math.random()*180)+'deg)';
+      overlay.appendChild(confetti);
+    }
+    overlay.classList.remove('hidden','show');
+    void overlay.offsetWidth;
+    overlay.classList.add('show');
+    playVictoryJingle();
+    getCelebrationTimer = setTimeout(function(){
+      overlay.classList.remove('show');
+      overlay.classList.add('hidden');
+      getCelebrationTimer = null;
+    }, 2800);
   }
 
   // ---- v2.2: lightweight particle / screen-shake effects ----
@@ -1187,7 +1298,8 @@
     // Single-folder deployment: images/<id>.png if present, else emoji fallback.
     el.innerHTML = '';
     var img = document.createElement('img');
-    img.src = 'images/' + character.id + '.png';
+    var imageFile = character.id === 'titanoboa' ? 'titanoboa_v2.png' : (character.id + '.png');
+    img.src = 'images/' + imageFile;
     img.alt = character.name;
     var fallback = document.createElement('span');
     fallback.textContent = character.emoji;
@@ -1522,7 +1634,19 @@
     var treasureDrop = rollTreasureDrop();
 
     saveState();
-    if(treasureDrop)setTimeout(function(){showAchievementToast('🎁 '+treasureDrop.name+'を みつけた！');},500);
+    var acquired = [];
+    if(isNew || shinyNew){
+      acquired.push({
+        kind:'character',
+        character:beaten,
+        shiny:shinyNew,
+        label:(shinyNew ? '✨いろちがい ' : '') + beaten.name + ' ゲット！'
+      });
+    }
+    if(treasureDrop){
+      acquired.push({kind:'treasure',emoji:treasureDrop.emoji,label:treasureDrop.name+' ゲット！'});
+    }
+    if(acquired.length) showGetCelebration(acquired);
     if(isNew && !shinyNew) SFX.newZukan();
     if(starUp && starRankFor(newWins)===3){
       SFX.starRank();
@@ -2014,8 +2138,11 @@
     document.getElementById('raidSparkles').classList.toggle('hidden',!success);
     card.className='panel raid-result-card '+(success?'success':'fail');void card.offsetWidth;
     overlay.classList.remove('hidden');
-    if(success){SFX.victory();SFX.shiny();}else{SFX.wrong();}
-    raidResultTimer=setTimeout(function(){overlay.classList.add('hidden');raidResultTimer=null;goToSelect();},success?1800:800);
+    if(success){
+      SFX.victory();SFX.shiny();
+      if(treasure) showGetCelebration([{kind:'treasure',emoji:treasure.emoji,label:treasure.name+' ゲット！'}]);
+    }else{SFX.wrong();}
+    raidResultTimer=setTimeout(function(){overlay.classList.add('hidden');raidResultTimer=null;goToSelect();},success?2800:800);
   }
   function finishRaid(){if(!raidState)return;if(raidTimer){clearInterval(raidTimer);raidTimer=null;}var rs=raidState;raidState=null;document.getElementById('raidOverlay').classList.add('hidden');var target=profiles[rs.targetPid],success=rs.correct>=4&&ownedTreasureCount(target,rs.treasureId)>0&&target.vaultId!==rs.treasureId,t=TREASURE_BY_ID[rs.treasureId];
     if(success){target.treasures[t.id]--;grantTreasure(persist,t.id);addRaidLog(persist,target.name+'から '+t.name+'を てにいれた');addRaidLog(target,persist.name+'に '+t.name+'を とられた');target.revengeCredit={against:profiles.current,treasureId:t.id};}
