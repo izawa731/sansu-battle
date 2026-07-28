@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 最終更新：2026-07-25 -->
+<!-- 最終更新：2026-07-28／バージョン：v3.3.1 -->
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -1298,7 +1298,7 @@
     // Single-folder deployment: images/<id>.png if present, else emoji fallback.
     el.innerHTML = '';
     var img = document.createElement('img');
-    var imageFile = character.id === 'titanoboa' ? 'titanoboa_v2.png' : (character.id + '.png');
+    var imageFile = character.id === 'titanoboa' ? 'titanoboa_v3.png' : (character.id + '.png');
     img.src = 'images/' + imageFile;
     img.alt = character.name;
     var fallback = document.createElement('span');
@@ -2249,7 +2249,7 @@
     saveState();
     return JSON.stringify({
       exportedAt: new Date().toISOString(),
-      appVersion: 'v3.0',
+      appVersion: 'v3.3.1',
       profileName: persist.name,
       // Display/report layer only. Raw profile weakness keys remain untouched
       // for practice and backward-compatible restore behavior.
