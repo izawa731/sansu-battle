@@ -1,0 +1,1281 @@
+<!doctype html>
+<!-- 最終更新：2026-07-29／バージョン：v1.3 -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#3b8bd4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ダイスレース">
+  <title>どうぶつダイスレース</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./images/tyranno.png">
+  <style>
+    :root {
+      --sky: #dff4ff;
+      --cream: #fff8df;
+      --ink: #2b3654;
+      --blue: #2d8dd6;
+      --blue-dark: #12639d;
+      --red: #ef6574;
+      --red-dark: #ac3545;
+      --yellow: #ffd95b;
+      --green: #78c96e;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+    }
+    body {
+      color: var(--ink);
+      font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 15% 8%, #ffffff 0 5%, transparent 5.5%),
+        radial-gradient(circle at 82% 13%, #ffffff 0 4%, transparent 4.5%),
+        linear-gradient(180deg, #cbefff 0 63%, #bfe7a9 63% 100%);
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+    button {
+      font: inherit;
+      min-height: 60px;
+      border: 0;
+      cursor: pointer;
+    }
+    button:focus-visible {
+      outline: 5px solid #fff;
+      outline-offset: 3px;
+    }
+    .hidden { display: none !important; }
+    .sr-only {
+      position: fixed;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .screen {
+      min-height: 100dvh;
+      padding:
+        max(12px, env(safe-area-inset-top))
+        12px
+        max(14px, env(safe-area-inset-bottom));
+    }
+    .credit {
+      position: fixed;
+      right: 8px;
+      bottom: max(5px, env(safe-area-inset-bottom));
+      z-index: 80;
+      padding: 3px 7px;
+      color: #334;
+      border-radius: 12px;
+      background: #ffffffb8;
+      font-size: 10px;
+    }
+
+    /* ホーム */
+    #homeScreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      text-align: center;
+    }
+    .title-cloud {
+      width: min(94vw, 470px);
+      padding: 18px 12px 15px;
+      border: 5px solid #fff;
+      border-radius: 34px;
+      color: #fff;
+      background: linear-gradient(145deg, var(--blue), #5bb8e9);
+      box-shadow: 0 10px 0 #1e70ab, 0 16px 30px #337da844;
+      transform: rotate(-1deg);
+    }
+    .title-cloud h1 {
+      margin: 0;
+      font-size: clamp(29px, 8vw, 44px);
+      letter-spacing: .05em;
+      text-shadow: 0 3px 0 #12639d;
+    }
+    .title-cloud p {
+      margin: 8px 0 0;
+      font-size: clamp(15px, 4vw, 19px);
+      font-weight: 800;
+    }
+    .team-preview {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      width: min(95vw, 500px);
+    }
+    .team-card {
+      padding: 10px 7px 8px;
+      border: 4px solid #fff;
+      border-radius: 24px;
+      box-shadow: 0 7px 18px #31506630;
+    }
+    .team-card.blue { background: #d6efff; color: var(--blue-dark); }
+    .team-card.red { background: #ffe1e6; color: var(--red-dark); }
+    .team-card h2 {
+      margin: 0 0 7px;
+      font-size: 22px;
+    }
+    .team-animals {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+    }
+    .team-animals img {
+      width: 100%;
+      height: 72px;
+      object-fit: contain;
+      filter: drop-shadow(0 3px 2px #27324a33);
+    }
+    .start-button {
+      width: min(88vw, 380px);
+      min-height: 76px;
+      padding: 10px 22px;
+      border: 5px solid #fff;
+      border-radius: 40px;
+      color: #663b00;
+      background: linear-gradient(#ffe777, #ffc943);
+      box-shadow: 0 8px 0 #d99125, 0 14px 24px #8a5d2238;
+      font-size: clamp(25px, 7vw, 34px);
+      font-weight: 900;
+    }
+    .start-button:active { transform: translateY(5px); box-shadow: 0 3px 0 #d99125; }
+
+    /* せんこう */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: #17334ecc;
+      backdrop-filter: blur(5px);
+    }
+    .overlay-card {
+      width: min(94vw, 430px);
+      padding: 24px 16px;
+      border: 5px solid #fff;
+      border-radius: 32px;
+      background: var(--cream);
+      box-shadow: 0 16px 45px #09213d88;
+      text-align: center;
+    }
+    .overlay-card h2 {
+      margin: 0 0 14px;
+      font-size: clamp(26px, 7vw, 36px);
+    }
+    .start-dice-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .start-die {
+      display: grid;
+      place-items: center;
+      min-height: 132px;
+      border: 5px solid;
+      border-radius: 26px;
+      background: #fff;
+      font-size: 70px;
+      font-weight: 900;
+    }
+    .start-die.blue { border-color: var(--blue); color: var(--blue-dark); }
+    .start-die.red { border-color: var(--red); color: var(--red-dark); }
+    .roll-note {
+      min-height: 34px;
+      margin: 6px 0 0;
+      font-size: 21px;
+      font-weight: 900;
+    }
+
+    /* ゲーム */
+    #gameScreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+    .top-row {
+      display: grid;
+      grid-template-columns: 64px 1fr 64px;
+      align-items: center;
+      width: 100%;
+      gap: 6px;
+    }
+    .home-button, .sound-button {
+      min-height: 60px;
+      padding: 4px;
+      border: 3px solid #fff;
+      border-radius: 20px;
+      color: var(--ink);
+      background: #ffffffd9;
+      font-size: 14px;
+      font-weight: 900;
+      box-shadow: 0 4px 0 #91b4c4;
+    }
+    .turn-banner {
+      min-height: 60px;
+      display: grid;
+      place-items: center;
+      padding: 5px 10px;
+      border: 4px solid #fff;
+      border-radius: 22px;
+      color: #fff;
+      font-size: clamp(21px, 6vw, 30px);
+      font-weight: 900;
+      box-shadow: 0 5px 0 #43607955;
+    }
+    .turn-banner.p1 { background: var(--red); }
+    .turn-banner.p2 { background: var(--blue); }
+    .goal-shelf {
+      position: relative;
+      width: min(94vw, 430px);
+      height: 66px;
+      padding: 4px 64px 4px 8px;
+      overflow: hidden;
+      border: 4px solid #fff;
+      border-radius: 20px;
+      background: linear-gradient(90deg, #fff7b7, #ffe27a);
+      box-shadow: 0 4px 0 #d8a63e;
+    }
+    .goal-shelf.bottom { padding: 4px 8px 4px 64px; }
+    .goal-label {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 17px;
+      font-weight: 900;
+      color: #81500b;
+    }
+    .goal-shelf.bottom .goal-label { left: 8px; right: auto; }
+    .goal-tokens {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      height: 100%;
+    }
+    .goal-token {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      animation: goalPop .55s ease-out;
+      filter: drop-shadow(0 2px 2px #5f431f55);
+    }
+    @keyframes goalPop {
+      0% { transform: translateY(55px) scale(.3) rotate(-15deg); }
+      65% { transform: translateY(-5px) scale(1.15) rotate(4deg); }
+      100% { transform: translateY(0) scale(1); }
+    }
+    .board {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      width: min(94vw, 430px);
+      height: min(49dvh, 520px);
+      min-height: 330px;
+      overflow: hidden;
+      border: 6px solid #6a9556;
+      border-radius: 22px;
+      background: #fff;
+      box-shadow: 0 8px 0 #557846, 0 12px 24px #3048294a;
+    }
+    .cell {
+      position: relative;
+      border-right: 2px solid #ffffffb8;
+      border-bottom: 2px solid #ffffffb8;
+      box-shadow: inset 0 0 0 2px #ffffff35, inset 0 7px 10px #ffffff35;
+    }
+    .cell:nth-child(1)  { background: #ff6b6b; }
+    .cell:nth-child(2)  { background: #4dabf7; }
+    .cell:nth-child(3)  { background: #ffe066; }
+    .cell:nth-child(4)  { background: #69db7c; }
+    .cell:nth-child(5)  { background: #a5d8ff; }
+    .cell:nth-child(6)  { background: #faa2c1; }
+    .cell:nth-child(7)  { background: #ffd8a8; }
+    .cell:nth-child(8)  { background: #ced4da; }
+    .cell:nth-child(9)  { background: #b197fc; }
+    .cell:nth-child(10) { background: #ffa94d; }
+    .cell:nth-child(11) {
+      background: #fff;
+      box-shadow: inset 0 0 0 2px #aeb8c2, inset 0 7px 10px #ffffff;
+    }
+    .cell:nth-child(12) { background: #343a40; }
+    .cell:nth-child(13) { background: linear-gradient(145deg, #fff09a, #e6b51d); }
+    .cell:nth-child(14) { background: linear-gradient(145deg, #f1f3f5, #9da6ae); }
+    .cell:nth-child(15) { background: #94d82d; }
+    .cell:nth-child(16) { background: #a47148; }
+    .cell:nth-child(17) { background: #364fc7; }
+    .cell:nth-child(18) { background: #fff3bf; }
+    .cell:nth-child(19) { background: #e5dbff; }
+    .cell:nth-child(20) { background: #38d9a9; }
+    .cell:nth-child(4n) { border-right: 0; }
+    .cell:nth-child(n+17) { border-bottom: 0; }
+    .token {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      z-index: 3;
+      width: clamp(60px, 15vw, 68px);
+      height: clamp(60px, 15vw, 68px);
+      min-height: 0;
+      padding: 1px;
+      border: 5px solid;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 0 3px #fff, 0 4px 9px #14202f99;
+      transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px)));
+      transition:
+        left var(--move-duration, .32s) ease-in-out,
+        top var(--move-duration, .32s) ease-in-out,
+        filter .2s;
+    }
+    .token.p1 { border-color: var(--red); }
+    .token.p2 { border-color: var(--blue); }
+    .token img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+    }
+    .token:not(.selectable) { pointer-events: none; }
+    .token.selectable {
+      animation: selectable 1s ease-in-out infinite;
+      cursor: pointer;
+    }
+    .token.selected {
+      z-index: 6;
+      filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 13px #ffd43b);
+    }
+    .token.hopping {
+      z-index: 7;
+      animation: tokenHop var(--move-duration, .3s) ease-out both;
+    }
+    .token.hopping.final-hop {
+      animation-name: tokenFinalHop;
+    }
+    .token.blocked-shake {
+      z-index: 7;
+      animation: blockedShake var(--move-duration, .34s) ease-in-out both;
+    }
+    @keyframes selectable {
+      0%, 100% { transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px))) scale(1); }
+      50% { transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px))) scale(1.12); }
+    }
+    @keyframes tokenHop {
+      0% {
+        transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px))) scale(1);
+      }
+      48% {
+        transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px) - 18px)) scale(1.06);
+      }
+      82% {
+        transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px) + 2px)) scale(.98);
+      }
+      100% {
+        transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px))) scale(1);
+      }
+    }
+    @keyframes tokenFinalHop {
+      0% {
+        transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px))) scale(1);
+      }
+      45% {
+        transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px) - 24px)) scale(1.1);
+      }
+      78% {
+        transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px) + 4px)) scale(.94);
+      }
+      90% {
+        transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px) - 5px)) scale(1.04);
+      }
+      100% {
+        transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px))) scale(1);
+      }
+    }
+    @keyframes blockedShake {
+      0%, 100% {
+        transform: translate(calc(-50% + var(--ox, 0px)), calc(-50% + var(--oy, 0px)));
+      }
+      25% {
+        transform: translate(calc(-50% + var(--ox, 0px) - 7px), calc(-50% + var(--oy, 0px))) rotate(-4deg);
+      }
+      50% {
+        transform: translate(calc(-50% + var(--ox, 0px) + 7px), calc(-50% + var(--oy, 0px))) rotate(4deg);
+      }
+      75% {
+        transform: translate(calc(-50% + var(--ox, 0px) - 4px), calc(-50% + var(--oy, 0px))) rotate(-2deg);
+      }
+    }
+    .control-panel {
+      width: min(94vw, 430px);
+      padding: 7px;
+      border: 4px solid #fff;
+      border-radius: 22px;
+      background: #ffffffdd;
+      box-shadow: 0 5px 0 #91b4c4;
+    }
+    .result-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin-bottom: 6px;
+    }
+    .die-result {
+      min-height: 66px;
+      display: grid;
+      place-items: center;
+      border: 3px solid #cbddea;
+      border-radius: 17px;
+      background: #fff;
+      font-size: clamp(26px, 7vw, 37px);
+      font-weight: 900;
+    }
+    .control-panel.p1 .die-result {
+      border-color: var(--red);
+      background: #ffe3e8;
+      color: var(--red-dark);
+      box-shadow: inset 0 0 0 2px #fff;
+    }
+    .control-panel.p2 .die-result {
+      border-color: var(--blue);
+      background: #dff2ff;
+      color: var(--blue-dark);
+      box-shadow: inset 0 0 0 2px #fff;
+    }
+    .die-result.rolling { animation: dieShake .16s linear infinite; }
+    @keyframes dieShake {
+      0% { transform: rotate(-5deg) scale(.96); }
+      50% { transform: rotate(5deg) scale(1.04); }
+      100% { transform: rotate(-5deg) scale(.96); }
+    }
+    .message {
+      min-height: 29px;
+      margin: 0 0 5px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 900;
+    }
+    .roll-button {
+      width: 100%;
+      min-height: 70px;
+      border: 4px solid #fff;
+      border-radius: 30px;
+      color: #563800;
+      background: linear-gradient(#ffe56f, #ffc63f);
+      box-shadow: 0 6px 0 #d58c21;
+      font-size: clamp(24px, 7vw, 32px);
+      font-weight: 900;
+    }
+    .roll-button:disabled { opacity: .45; filter: grayscale(.5); box-shadow: none; }
+    .roll-button:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #d58c21; }
+
+    /* しょうり */
+    #victoryOverlay { overflow: hidden; }
+    .winner-art {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 140px;
+    }
+    .winner-art img {
+      width: 118px;
+      height: 118px;
+      object-fit: contain;
+      margin: -12px;
+      filter: drop-shadow(0 5px 5px #3f3b2744);
+      animation: winnerBounce .7s ease-in-out infinite alternate;
+    }
+    .winner-art img:nth-child(2) { animation-delay: .15s; }
+    .winner-art img:nth-child(3) { animation-delay: .3s; }
+    .winner-art img:nth-child(4) { animation-delay: .45s; }
+    @keyframes winnerBounce { to { transform: translateY(-13px) rotate(4deg); } }
+    .winner-title {
+      margin: 2px 0 12px;
+      font-size: clamp(34px, 10vw, 52px);
+      color: #e67b17;
+      text-shadow: 0 3px #fff, 0 6px #ffd348;
+    }
+    .again-button {
+      width: 100%;
+      min-height: 70px;
+      border: 4px solid #fff;
+      border-radius: 34px;
+      color: #fff;
+      background: linear-gradient(#69c567, #3c9b50);
+      box-shadow: 0 6px 0 #287539;
+      font-size: 28px;
+      font-weight: 900;
+    }
+    .confetti {
+      position: fixed;
+      top: -30px;
+      z-index: 120;
+      width: 12px;
+      height: 22px;
+      border-radius: 3px;
+      pointer-events: none;
+      animation: confettiFall 3s linear forwards;
+    }
+    @keyframes confettiFall {
+      to { transform: translate(var(--drift), 115dvh) rotate(900deg); }
+    }
+    @media (max-height: 720px) {
+      .goal-shelf { height: 55px; }
+      .goal-token { width: 40px; height: 40px; }
+      .board { height: 43dvh; min-height: 292px; }
+      .control-panel { padding: 5px; }
+      .die-result { min-height: 55px; }
+      .roll-button { min-height: 62px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section id="homeScreen" class="screen">
+      <div class="title-cloud">
+        <h1>どうぶつ<br>ダイスレース</h1>
+        <p>サイコロで ゴールを めざそう！</p>
+      </div>
+      <div class="team-preview" aria-label="ふたつのチーム">
+        <div class="team-card red">
+          <h2>あかチーム</h2>
+          <div class="team-animals">
+            <img src="./images/tyranno.png" alt="ティラノサウルス">
+            <img src="./images/elephant.png" alt="ゾウ">
+            <img src="./images/hornet.png" alt="オオスズメバチ">
+            <img src="./images/shark.png" alt="ホホジロザメ">
+          </div>
+        </div>
+        <div class="team-card blue">
+          <h2>あおチーム</h2>
+          <div class="team-animals">
+            <img src="./images/quetzalcoatlus.png" alt="ケツァルコアトルス">
+            <img src="./images/hercules.png" alt="ヘラクレスオオカブト">
+            <img src="./images/lion.png" alt="ライオン">
+            <img src="./images/titanoboa_v3.png" alt="ティタノボア">
+          </div>
+        </div>
+      </div>
+      <button id="startButton" class="start-button" type="button">ふたりで あそぶ</button>
+    </section>
+
+    <section id="gameScreen" class="screen hidden" aria-label="ゲームがめん">
+      <div class="top-row">
+        <button id="homeButton" class="home-button" type="button">もどる</button>
+        <div id="turnBanner" class="turn-banner p1">あかチームの ばん！</div>
+        <button id="soundButton" class="sound-button" type="button" aria-pressed="true">おと<br>あり</button>
+      </div>
+
+      <div class="goal-shelf top">
+        <div id="p1GoalTokens" class="goal-tokens"></div>
+        <div class="goal-label">あか<br>ゴール</div>
+      </div>
+
+      <div id="board" class="board" aria-label="よんかけるごの ばん">
+        <div class="cell" data-row="0" data-col="0"></div><div class="cell" data-row="0" data-col="1"></div><div class="cell" data-row="0" data-col="2"></div><div class="cell" data-row="0" data-col="3"></div>
+        <div class="cell" data-row="1" data-col="0"></div><div class="cell" data-row="1" data-col="1"></div><div class="cell" data-row="1" data-col="2"></div><div class="cell" data-row="1" data-col="3"></div>
+        <div class="cell" data-row="2" data-col="0"></div><div class="cell" data-row="2" data-col="1"></div><div class="cell" data-row="2" data-col="2"></div><div class="cell" data-row="2" data-col="3"></div>
+        <div class="cell" data-row="3" data-col="0"></div><div class="cell" data-row="3" data-col="1"></div><div class="cell" data-row="3" data-col="2"></div><div class="cell" data-row="3" data-col="3"></div>
+        <div class="cell" data-row="4" data-col="0"></div><div class="cell" data-row="4" data-col="1"></div><div class="cell" data-row="4" data-col="2"></div><div class="cell" data-row="4" data-col="3"></div>
+      </div>
+
+      <div class="goal-shelf bottom">
+        <div class="goal-label">あお<br>ゴール</div>
+        <div id="p2GoalTokens" class="goal-tokens"></div>
+      </div>
+
+      <div id="controlPanel" class="control-panel p1">
+        <div class="result-row">
+          <div id="numberDie" class="die-result" aria-label="かずのサイコロ">？</div>
+          <div id="directionDie" class="die-result" aria-label="いきさきのサイコロ">？</div>
+        </div>
+        <p id="message" class="message" aria-live="polite">サイコロを ふってね！</p>
+        <button id="rollButton" class="roll-button" type="button">サイコロを ふる</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="starterOverlay" class="overlay hidden" aria-live="polite">
+    <div class="overlay-card">
+      <h2>せんこうを きめるよ！</h2>
+      <div class="start-dice-row">
+        <div id="p1StartDie" class="start-die red">？</div>
+        <div id="p2StartDie" class="start-die blue">？</div>
+      </div>
+      <p id="starterNote" class="roll-note">ふたりで サイコロ！</p>
+    </div>
+  </div>
+
+  <div id="victoryOverlay" class="overlay hidden">
+    <div class="overlay-card">
+      <div id="winnerArt" class="winner-art"></div>
+      <h2 id="winnerTitle" class="winner-title">あかチームの かち！</h2>
+      <button id="againButton" class="again-button" type="button">もういちど</button>
+    </div>
+  </div>
+
+  <output id="logicTestStatus" class="sr-only" aria-live="polite">ロジックテスト じっこうまえ</output>
+  <output id="runtimeErrorStatus" class="sr-only" aria-live="polite">コンソールエラー なし</output>
+  <output id="offlineStatus" class="sr-only" aria-live="polite">オフラインじゅんび じっこうまえ</output>
+  <output id="moveTestStatus" class="sr-only" aria-live="polite">いどうテスト じっこうまえ</output>
+  <div class="credit">v1.3 ／ BGM：魔王魂</div>
+
+  <audio id="openingBgm" src="./sounds/bgm_opening.mp3" preload="auto" loop></audio>
+  <audio id="battleBgm" src="./sounds/bgm_battle_v2.mp3" preload="auto" loop></audio>
+  <audio id="victoryJingle" src="./sounds/jingle_victory.mp3" preload="auto"></audio>
+
+  <script>
+  (() => {
+    "use strict";
+
+    const runtimeErrors = [];
+    function recordRuntimeError(value) {
+      runtimeErrors.push(String(value || "ふめいなエラー"));
+      document.getElementById("runtimeErrorStatus").textContent = "コンソールエラー あり";
+    }
+    window.addEventListener("error", (event) => recordRuntimeError(event.message));
+    window.addEventListener("unhandledrejection", (event) =>
+      recordRuntimeError(event.reason && event.reason.message ? event.reason.message : event.reason)
+    );
+
+    const TEAM = {
+      1: {
+        name: "あかチーム",
+        className: "p1",
+        animals: [
+          { id: "p1-t", name: "ティラノサウルス", image: "./images/tyranno.png" },
+          { id: "p1-e", name: "ゾウ", image: "./images/elephant.png" },
+          { id: "p1-h", name: "オオスズメバチ", image: "./images/hornet.png" },
+          { id: "p1-s", name: "ホホジロザメ", image: "./images/shark.png" }
+        ]
+      },
+      2: {
+        name: "あおチーム",
+        className: "p2",
+        animals: [
+          { id: "p2-q", name: "ケツァルコアトルス", image: "./images/quetzalcoatlus.png" },
+          { id: "p2-h", name: "ヘラクレスオオカブト", image: "./images/hercules.png" },
+          { id: "p2-l", name: "ライオン", image: "./images/lion.png" },
+          { id: "p2-t", name: "ティタノボア", image: "./images/titanoboa_v3.png" }
+        ]
+      }
+    };
+    const DIRECTIONS = ["まえ", "まえ", "みぎ", "ひだり"];
+    const DIRECTION_SYMBOL = { "まえ": "⬆", "みぎ": "➡", "ひだり": "⬅" };
+    const TEST_SPEED = new URLSearchParams(location.search).has("qa") ? 0.04 : 1;
+    const HOP_DURATION = 320;
+    const HOP_REST_DURATION = 120;
+    let landingAudioContext = null;
+    let landingSoundCount = 0;
+    let lastMoveStepCount = 0;
+    const state = {
+      player: 1,
+      phase: "home",
+      pending: null,
+      tokens: [],
+      sound: true,
+      gameOver: false
+    };
+
+    const homeScreen = document.getElementById("homeScreen");
+    const gameScreen = document.getElementById("gameScreen");
+    const starterOverlay = document.getElementById("starterOverlay");
+    const victoryOverlay = document.getElementById("victoryOverlay");
+    const board = document.getElementById("board");
+    const turnBanner = document.getElementById("turnBanner");
+    const numberDie = document.getElementById("numberDie");
+    const directionDie = document.getElementById("directionDie");
+    const message = document.getElementById("message");
+    const rollButton = document.getElementById("rollButton");
+    const openingBgm = document.getElementById("openingBgm");
+    const battleBgm = document.getElementById("battleBgm");
+    const victoryJingle = document.getElementById("victoryJingle");
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function buildMoveSteps(token, direction, count, player) {
+      const steps = [];
+      let current = { ...token };
+      if (current.goal) return steps;
+      for (let step = 0; step < count; step += 1) {
+        const next = { ...current };
+        if (direction === "みぎ" || direction === "ひだり") {
+          const delta = direction === "みぎ" ? 1 : -1;
+          const nextCol = clamp(next.col + delta, 0, 3);
+          if (nextCol === next.col) break;
+          next.col = nextCol;
+        } else {
+          next.row += player === 1 ? -1 : 1;
+          if ((player === 1 && next.row < 0) || (player === 2 && next.row > 4)) {
+            next.goal = true;
+            next.row = null;
+            next.col = null;
+          }
+        }
+        steps.push(next);
+        current = next;
+        if (next.goal) break;
+      }
+      return steps;
+    }
+
+    function applyMove(token, direction, count, player) {
+      const steps = buildMoveSteps(token, direction, count, player);
+      return steps.length ? steps[steps.length - 1] : { ...token };
+    }
+
+    function resolveStarter(rollPairs) {
+      for (let index = 0; index < rollPairs.length; index += 1) {
+        const [p1, p2] = rollPairs[index];
+        if (p1 !== p2) return { player: p1 > p2 ? 1 : 2, rounds: index + 1 };
+      }
+      return null;
+    }
+
+    function overlapOffsets(count) {
+      const patterns = {
+        1: [[0, 0]],
+        2: [[-9, -7], [9, 7]],
+        3: [[-11, -8], [11, -8], [0, 10]],
+        4: [[-11, -10], [11, -10], [-11, 10], [11, 10]],
+        5: [[-13, -11], [13, -11], [-13, 11], [13, 11], [0, 0]],
+        6: [[-15, -12], [0, -12], [15, -12], [-15, 12], [0, 12], [15, 12]],
+        7: [[-16, -14], [0, -14], [16, -14], [-16, 0], [16, 0], [-9, 14], [9, 14]],
+        8: [[-17, -14], [0, -14], [17, -14], [-17, 0], [17, 0], [-17, 14], [0, 14], [17, 14]]
+      };
+      return patterns[Math.min(8, Math.max(1, count))];
+    }
+
+    function hasWon(tokens, player) {
+      return tokens.filter((token) => token.player === player).every((token) => token.goal);
+    }
+
+    function runLogicTests() {
+      const tests = [];
+      function check(name, condition) {
+        tests.push({ name, pass: Boolean(condition) });
+        if (!condition) throw new Error("テストしっぱい: " + name);
+      }
+      check("みぎの はしで とまる", applyMove({ row: 2, col: 3, goal: false }, "みぎ", 2, 1).col === 3);
+      check("ゴールを こえても ゴール", applyMove({ row: 1, col: 2, goal: false }, "まえ", 3, 1).goal);
+      check("3マスを 1マスずつ", buildMoveSteps({ row: 4, col: 1, goal: false }, "まえ", 3, 1).length === 3);
+      check("はしまでの ぶんだけ", buildMoveSteps({ row: 2, col: 2, goal: false }, "みぎ", 3, 1).length === 1);
+      check("うごけないと 0マス", buildMoveSteps({ row: 2, col: 3, goal: false }, "みぎ", 3, 1).length === 0);
+      const offsets = overlapOffsets(4).map((pair) => pair.join(","));
+      check("かさなりを ずらす", new Set(offsets).size === 4);
+      check("よんひきで しょうり", hasWon([1, 2, 3, 4].map((n) => ({ player: 1, goal: true, n })), 1));
+      const starter = resolveStarter([[2, 2], [1, 3]]);
+      check("おなじなら ふりなおす", starter.player === 2 && starter.rounds === 2);
+      return tests;
+    }
+
+    function makeTokens() {
+      const tokens = [];
+      TEAM[1].animals.forEach((animal, col) => {
+        tokens.push({ ...animal, player: 1, row: 4, col, goal: false });
+      });
+      TEAM[2].animals.forEach((animal, col) => {
+        tokens.push({ ...animal, player: 2, row: 0, col, goal: false });
+      });
+      return tokens;
+    }
+
+    function randomNumber() {
+      return 1 + Math.floor(Math.random() * 3);
+    }
+
+    function randomDirection() {
+      return DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
+    }
+
+    function setAudioVolume() {
+      openingBgm.volume = state.sound ? 0.34 : 0;
+      battleBgm.volume = state.sound ? 0.34 : 0;
+      victoryJingle.volume = state.sound ? 0.75 : 0;
+    }
+
+    function safePlay(audio) {
+      if (!state.sound) return Promise.resolve();
+      const promise = audio.play();
+      return promise && promise.catch ? promise.catch(() => {}) : Promise.resolve();
+    }
+
+    function stopAudio(audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
+    function playLandingSound() {
+      landingSoundCount += 1;
+      if (!state.sound) return;
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      if (!landingAudioContext) landingAudioContext = new AudioContextClass();
+      if (landingAudioContext.state === "suspended") {
+        landingAudioContext.resume().catch(() => {});
+      }
+      const now = landingAudioContext.currentTime;
+      const oscillator = landingAudioContext.createOscillator();
+      const gain = landingAudioContext.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(210, now);
+      oscillator.frequency.exponentialRampToValueAtTime(115, now + .085);
+      gain.gain.setValueAtTime(.0001, now);
+      gain.gain.exponentialRampToValueAtTime(.065, now + .008);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + .1);
+      oscillator.connect(gain);
+      gain.connect(landingAudioContext.destination);
+      oscillator.start(now);
+      oscillator.stop(now + .105);
+    }
+
+    function startNewGame() {
+      state.tokens = makeTokens();
+      state.pending = null;
+      state.gameOver = false;
+      state.phase = "starter";
+      homeScreen.classList.add("hidden");
+      gameScreen.classList.remove("hidden");
+      victoryOverlay.classList.add("hidden");
+      starterOverlay.classList.remove("hidden");
+      numberDie.textContent = "？";
+      directionDie.textContent = "？";
+      rollButton.disabled = true;
+      stopAudio(battleBgm);
+      openingBgm.currentTime = 0;
+      safePlay(openingBgm);
+      render();
+      determineFirstPlayer();
+    }
+
+    async function animateStarterDice() {
+      const p1Die = document.getElementById("p1StartDie");
+      const p2Die = document.getElementById("p2StartDie");
+      for (let frame = 0; frame < 11; frame += 1) {
+        p1Die.textContent = randomNumber();
+        p2Die.textContent = randomNumber();
+        await wait(80);
+      }
+      const p1 = randomNumber();
+      const p2 = randomNumber();
+      p1Die.textContent = p1;
+      p2Die.textContent = p2;
+      return [p1, p2];
+    }
+
+    async function determineFirstPlayer() {
+      const note = document.getElementById("starterNote");
+      let pair;
+      do {
+        note.textContent = "ふたりで サイコロ！";
+        pair = await animateStarterDice();
+        if (pair[0] === pair[1]) {
+          note.textContent = "おなじ！ もういちど！";
+          await wait(700);
+        }
+      } while (pair[0] === pair[1]);
+      state.player = pair[0] > pair[1] ? 1 : 2;
+      note.textContent = TEAM[state.player].name + "が せんこう！";
+      await wait(1050);
+      starterOverlay.classList.add("hidden");
+      stopAudio(openingBgm);
+      battleBgm.currentTime = 0;
+      safePlay(battleBgm);
+      state.phase = "roll";
+      message.textContent = "サイコロを ふってね！";
+      rollButton.disabled = false;
+      render();
+    }
+
+    function wait(ms) {
+      return new Promise((resolve) => setTimeout(resolve, Math.max(1, ms * TEST_SPEED)));
+    }
+
+    function later(callback, ms) {
+      return setTimeout(callback, Math.max(1, ms * TEST_SPEED));
+    }
+
+    async function rollTurn(forced) {
+      if (state.phase !== "roll" || state.gameOver) return;
+      state.phase = "rolling";
+      rollButton.disabled = true;
+      message.textContent = "サイコロが ころころ！";
+      numberDie.classList.add("rolling");
+      directionDie.classList.add("rolling");
+      for (let frame = 0; frame < 12; frame += 1) {
+        numberDie.textContent = randomNumber();
+        const direction = randomDirection();
+        directionDie.textContent = DIRECTION_SYMBOL[direction] + " " + direction;
+        await wait(70);
+      }
+      const count = forced && forced.count ? forced.count : randomNumber();
+      const direction = forced && forced.direction ? forced.direction : randomDirection();
+      state.pending = { count, direction };
+      numberDie.textContent = String(count);
+      directionDie.textContent = DIRECTION_SYMBOL[direction] + " " + direction;
+      numberDie.classList.remove("rolling");
+      directionDie.classList.remove("rolling");
+      state.phase = "select";
+      message.textContent = "どの どうぶつを うごかす？";
+      render();
+    }
+
+    function chooseToken(tokenId) {
+      if (state.phase !== "select" || state.gameOver) return;
+      const index = state.tokens.findIndex((token) =>
+        token.id === tokenId && token.player === state.player && !token.goal
+      );
+      if (index < 0) return;
+      state.phase = "moving";
+      render();
+      const tokenElement = board.querySelector('[data-token-id="' + tokenId + '"]');
+      if (tokenElement) tokenElement.classList.add("selected");
+      moveChosenToken(index).catch((error) =>
+        recordRuntimeError(error && error.message ? error.message : error)
+      );
+    }
+
+    function waitForMotionEvent(tokenElement, eventName, duration) {
+      return new Promise((resolve) => {
+        let finished = false;
+        const finish = (event) => {
+          if (finished || (event && event.target !== tokenElement)) return;
+          finished = true;
+          tokenElement.removeEventListener(eventName, finish);
+          clearTimeout(fallback);
+          resolve();
+        };
+        const fallback = setTimeout(
+          () => finish(),
+          Math.max(40, duration * TEST_SPEED + 80)
+        );
+        tokenElement.addEventListener(eventName, finish);
+      });
+    }
+
+    async function animateTokenHop(tokenId, target, player, isFinal) {
+      const tokenElement = board.querySelector('[data-token-id="' + tokenId + '"]');
+      if (!tokenElement) return;
+      const duration = HOP_DURATION;
+      tokenElement.style.setProperty("--move-duration", Math.max(20, duration * TEST_SPEED) + "ms");
+      tokenElement.getBoundingClientRect();
+      const animationFinished = waitForMotionEvent(tokenElement, "animationend", duration);
+      const transitionFinished = waitForMotionEvent(tokenElement, "transitionend", duration);
+      tokenElement.classList.remove("selected");
+      tokenElement.classList.add("hopping");
+      if (isFinal) tokenElement.classList.add("final-hop");
+      if (target.goal) {
+        tokenElement.style.top = player === 1 ? "-8%" : "108%";
+      } else {
+        tokenElement.style.left = ((target.col + .5) * 25) + "%";
+        tokenElement.style.top = ((target.row + .5) * 20) + "%";
+      }
+      await Promise.all([animationFinished, transitionFinished]);
+    }
+
+    async function showBlockedMove(tokenId) {
+      const tokenElement = board.querySelector('[data-token-id="' + tokenId + '"]');
+      if (!tokenElement) return;
+      tokenElement.style.setProperty("--move-duration", Math.max(20, 340 * TEST_SPEED) + "ms");
+      tokenElement.classList.remove("selected");
+      tokenElement.classList.add("blocked-shake");
+      await wait(340);
+    }
+
+    async function moveChosenToken(index) {
+      const before = state.tokens[index];
+      const steps = buildMoveSteps(
+        before,
+        state.pending.direction,
+        state.pending.count,
+        state.player
+      );
+      lastMoveStepCount = steps.length;
+      if (steps.length === 0) {
+        message.textContent = "うごけない！";
+        await showBlockedMove(before.id);
+        state.pending = null;
+        render();
+        await wait(360);
+        nextTurn();
+        return;
+      }
+      for (let stepIndex = 0; stepIndex < steps.length; stepIndex += 1) {
+        const step = steps[stepIndex];
+        const isFinal = stepIndex === steps.length - 1;
+        message.textContent = "タン！ " + (stepIndex + 1) + "／" + steps.length;
+        await animateTokenHop(before.id, step, state.player, isFinal);
+        state.tokens[index] = step;
+        playLandingSound();
+        render();
+        await wait(HOP_REST_DURATION);
+      }
+      const after = state.tokens[index];
+      const reachedGoal = !before.goal && after.goal;
+      state.pending = null;
+      if (reachedGoal) {
+        message.textContent = after.name + " ゴール！";
+        await wait(90);
+        playGoalSound();
+      } else {
+        message.textContent = after.name + "が すすんだよ！";
+      }
+      if (hasWon(state.tokens, state.player)) {
+        await wait(reachedGoal ? 760 : 420);
+        showVictory(state.player);
+        return;
+      }
+      await wait(reachedGoal ? 820 : 480);
+      nextTurn();
+    }
+
+    function nextTurn() {
+      state.player = state.player === 1 ? 2 : 1;
+      state.phase = "roll";
+      numberDie.textContent = "？";
+      directionDie.textContent = "？";
+      message.textContent = "サイコロを ふってね！";
+      rollButton.disabled = false;
+      render();
+    }
+
+    function playGoalSound() {
+      if (!state.sound) return;
+      victoryJingle.pause();
+      victoryJingle.currentTime = 0;
+      safePlay(victoryJingle);
+      later(() => {
+        if (!state.gameOver) victoryJingle.pause();
+      }, 900);
+    }
+
+    function showVictory(player) {
+      state.gameOver = true;
+      state.phase = "over";
+      stopAudio(battleBgm);
+      victoryJingle.pause();
+      victoryJingle.currentTime = 0;
+      safePlay(victoryJingle);
+      const winnerTitle = document.getElementById("winnerTitle");
+      winnerTitle.textContent = TEAM[player].name + "の かち！";
+      winnerTitle.style.color = player === 1 ? "var(--red)" : "var(--blue)";
+      const art = document.getElementById("winnerArt");
+      art.innerHTML = "";
+      TEAM[player].animals.forEach((animal) => {
+        const image = document.createElement("img");
+        image.src = animal.image;
+        image.alt = animal.name;
+        art.appendChild(image);
+      });
+      victoryOverlay.classList.remove("hidden");
+      createConfetti();
+    }
+
+    function createConfetti() {
+      const colors = ["#ffd43b", "#2d8dd6", "#ef6574", "#75c96a", "#a66ce0", "#ff923e"];
+      for (let index = 0; index < 72; index += 1) {
+        const piece = document.createElement("i");
+        piece.className = "confetti";
+        piece.style.left = Math.random() * 100 + "vw";
+        piece.style.background = colors[index % colors.length];
+        piece.style.animationDelay = Math.random() * .8 + "s";
+        piece.style.animationDuration = 2.2 + Math.random() * 1.5 + "s";
+        piece.style.setProperty("--drift", (Math.random() * 180 - 90) + "px");
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 4400);
+      }
+    }
+
+    function render() {
+      turnBanner.className = "turn-banner " + TEAM[state.player].className;
+      turnBanner.textContent = TEAM[state.player].name + "の ばん！";
+      document.getElementById("controlPanel").className =
+        "control-panel " + TEAM[state.player].className;
+      board.dataset.phase = state.phase;
+      board.dataset.landingSoundCount = String(landingSoundCount);
+      board.dataset.lastMoveStepCount = String(lastMoveStepCount);
+      document.getElementById("moveTestStatus").textContent =
+        "いどう " + lastMoveStepCount + "マス／タン " + landingSoundCount + "かい";
+      renderBoardTokens();
+      renderGoalShelf(1);
+      renderGoalShelf(2);
+    }
+
+    function renderBoardTokens() {
+      board.querySelectorAll(".token").forEach((token) => token.remove());
+      const positionGroups = new Map();
+      state.tokens.filter((token) => !token.goal).forEach((token) => {
+        const key = token.row + ":" + token.col;
+        if (!positionGroups.has(key)) positionGroups.set(key, []);
+        positionGroups.get(key).push(token);
+      });
+      positionGroups.forEach((tokensAtCell) => {
+        const offsets = overlapOffsets(tokensAtCell.length);
+        tokensAtCell.forEach((token, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "token " + TEAM[token.player].className;
+          if (state.phase === "select" && token.player === state.player) {
+            button.classList.add("selectable");
+          }
+          button.dataset.tokenId = token.id;
+          button.setAttribute("aria-label", token.name);
+          button.style.left = ((token.col + .5) * 25) + "%";
+          button.style.top = ((token.row + .5) * 20) + "%";
+          button.style.setProperty("--ox", offsets[index][0] + "px");
+          button.style.setProperty("--oy", offsets[index][1] + "px");
+          const image = document.createElement("img");
+          image.src = token.image;
+          image.alt = "";
+          button.appendChild(image);
+          button.addEventListener("click", () => chooseToken(token.id));
+          board.appendChild(button);
+        });
+      });
+    }
+
+    function renderGoalShelf(player) {
+      const container = document.getElementById(player === 1 ? "p1GoalTokens" : "p2GoalTokens");
+      const goalTokens = state.tokens.filter((token) => token.player === player && token.goal);
+      const goalTokenIds = new Set(goalTokens.map((token) => token.id));
+      container.querySelectorAll(".goal-token").forEach((image) => {
+        if (!goalTokenIds.has(image.dataset.tokenId)) image.remove();
+      });
+      goalTokens.forEach((token) => {
+        let image = container.querySelector('[data-token-id="' + token.id + '"]');
+        if (!image) {
+          image = document.createElement("img");
+          image.className = "goal-token";
+          image.dataset.tokenId = token.id;
+          image.src = token.image;
+          image.alt = token.name;
+        }
+        container.appendChild(image);
+      });
+    }
+
+    function goHome() {
+      state.phase = "home";
+      state.gameOver = false;
+      stopAudio(openingBgm);
+      stopAudio(battleBgm);
+      victoryJingle.pause();
+      starterOverlay.classList.add("hidden");
+      victoryOverlay.classList.add("hidden");
+      gameScreen.classList.add("hidden");
+      homeScreen.classList.remove("hidden");
+    }
+
+    function toggleSound() {
+      state.sound = !state.sound;
+      setAudioVolume();
+      const button = document.getElementById("soundButton");
+      button.setAttribute("aria-pressed", String(state.sound));
+      button.innerHTML = state.sound ? "おと<br>あり" : "おと<br>なし";
+      if (!state.sound) {
+        openingBgm.pause();
+        battleBgm.pause();
+        victoryJingle.pause();
+      } else if (state.phase === "roll" || state.phase === "select" || state.phase === "moving") {
+        safePlay(battleBgm);
+      }
+    }
+
+    document.getElementById("startButton").addEventListener("click", startNewGame);
+    document.getElementById("homeButton").addEventListener("click", goHome);
+    document.getElementById("againButton").addEventListener("click", startNewGame);
+    document.getElementById("soundButton").addEventListener("click", toggleSound);
+    rollButton.addEventListener("click", () => rollTurn());
+
+    setAudioVolume();
+    window.RaceLogic = {
+      applyMove,
+      buildMoveSteps,
+      resolveStarter,
+      overlapOffsets,
+      hasWon,
+      randomDirection,
+      runLogicTests
+    };
+    window.__race_debug = {
+      state,
+      startNewGame,
+      rollTurn,
+      chooseToken,
+      render,
+      forceReady(player = 1) {
+        state.player = player;
+        state.phase = "roll";
+        state.pending = null;
+        state.gameOver = false;
+        state.tokens = makeTokens();
+        homeScreen.classList.add("hidden");
+        gameScreen.classList.remove("hidden");
+        starterOverlay.classList.add("hidden");
+        victoryOverlay.classList.add("hidden");
+        stopAudio(openingBgm);
+        stopAudio(battleBgm);
+        render();
+      },
+      forceFront(count = 3) {
+        return rollTurn({ count, direction: "まえ" });
+      },
+      forceMove(count, direction) {
+        return rollTurn({ count, direction });
+      },
+      getLandingSoundCount() { return landingSoundCount; },
+      getLastMoveStepCount() { return lastMoveStepCount; },
+      getRuntimeErrors() { return runtimeErrors.slice(); }
+    };
+    try {
+      const selfTests = runLogicTests();
+      window.__race_test_results = selfTests;
+      document.getElementById("logicTestStatus").textContent =
+        "ロジックテスト " + selfTests.filter((test) => test.pass).length + "こ せいこう";
+    } catch (error) {
+      window.__race_test_error = String(error && error.message ? error.message : error);
+      document.getElementById("logicTestStatus").textContent = "ロジックテスト しっぱい";
+      throw error;
+    }
+
+    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").then(() => {
+          document.getElementById("offlineStatus").textContent = "オフラインじゅんび できた";
+        }).catch((error) => {
+          document.getElementById("offlineStatus").textContent = "オフラインじゅんび しっぱい";
+          recordRuntimeError(error && error.message ? error.message : error);
+        });
+      });
+    }
+  })();
+  </script>
+</body>
+</html>

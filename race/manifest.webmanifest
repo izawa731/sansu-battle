@@ -1,0 +1,21 @@
+{
+  "last_updated": "2026-07-29",
+  "version": "1.3",
+  "name": "どうぶつダイスレース",
+  "short_name": "ダイスレース",
+  "description": "ふたりであそぶ どうぶつのすごろくゲーム",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff8df",
+  "theme_color": "#3b8bd4",
+  "icons": [
+    {
+      "src": "./images/tyranno.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
