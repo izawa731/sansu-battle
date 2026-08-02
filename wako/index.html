@@ -1,0 +1,2093 @@
+<!doctype html>
+<!-- 最終更新：2026-08-02／v0.3 -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2d3a2f">
+  <title>和古｜売上・経費</title>
+  <style>
+    :root {
+      --paper: #f6f0df;
+      --paper-deep: #eee3c8;
+      --ink: #24231f;
+      --ink-soft: #625f55;
+      --green: #496f43;
+      --green-dark: #2d5130;
+      --green-pale: #e1edd9;
+      --yellow: #e7bb3f;
+      --yellow-pale: #fff3bc;
+      --red: #b84436;
+      --red-pale: #f9ded8;
+      --gray: #77766f;
+      --gray-pale: #e7e5de;
+      --gold: #b7831e;
+      --gold-pale: #f8e6a9;
+      --line: #b9ae95;
+      --white: #fffdf5;
+      --shadow: 0 12px 32px rgba(48, 42, 27, .13);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      min-height: 100%;
+      background: #d9d2c1;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "BIZ UDPGothic", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
+      background:
+        radial-gradient(circle at 15% 5%, rgba(255,255,255,.75), transparent 26%),
+        linear-gradient(135deg, #d9d2c1, #ebe5d5);
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    button {
+      touch-action: manipulation;
+    }
+
+    .app {
+      width: min(100%, 430px);
+      min-height: 100vh;
+      margin: 0 auto;
+      overflow: hidden;
+      position: relative;
+      background:
+        repeating-linear-gradient(0deg, rgba(77,62,34,.018) 0 1px, transparent 1px 5px),
+        var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      padding: max(12px, env(safe-area-inset-top)) 16px 17px;
+      color: #fffdf1;
+      text-align: center;
+      background:
+        radial-gradient(circle at 12px 100%, transparent 12px, var(--green-dark) 13px) 0 100% / 24px 20px repeat-x,
+        linear-gradient(var(--green-dark), var(--green-dark)) 0 0 / 100% calc(100% - 12px) no-repeat;
+      filter: drop-shadow(0 4px 3px rgba(40,37,25,.18));
+    }
+
+    .header-row {
+      min-height: 42px;
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand {
+      grid-column: 2;
+      margin: 0;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: 27px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      line-height: 1;
+    }
+
+    .brand small {
+      display: block;
+      margin-top: 6px;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .14em;
+      opacity: .9;
+    }
+
+    .header-icon {
+      width: 44px;
+      height: 44px;
+      border: 0;
+      border-radius: 50%;
+      color: #fff;
+      background: rgba(255,255,255,.12);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    #backButton { grid-column: 1; grid-row: 1; }
+    #homeButton { grid-column: 3; grid-row: 1; }
+
+    .header-icon:focus-visible,
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 4px solid rgba(231,187,63,.7);
+      outline-offset: 2px;
+    }
+
+    main {
+      min-height: calc(100vh - 82px);
+    }
+
+    .screen {
+      display: none;
+      min-height: calc(100vh - 82px);
+      padding: 20px 16px calc(28px + env(safe-area-inset-bottom));
+      animation: fade-in .24s ease-out;
+    }
+
+    .screen.active { display: block; }
+
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .12em;
+    }
+
+    h2 {
+      margin: 0;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: 25px;
+      line-height: 1.35;
+    }
+
+    .lead {
+      margin: 10px 0 20px;
+      color: var(--ink-soft);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .action-stack {
+      display: grid;
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .big-action {
+      width: 100%;
+      min-height: 104px;
+      display: grid;
+      grid-template-columns: 62px 1fr 26px;
+      align-items: center;
+      gap: 12px;
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      padding: 16px;
+      color: var(--ink);
+      text-align: left;
+      background: var(--white);
+      box-shadow: 4px 5px 0 var(--ink);
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+    .big-action:active {
+      transform: translate(3px, 4px);
+      box-shadow: 1px 1px 0 var(--ink);
+    }
+
+    .big-action.expense {
+      background: var(--yellow-pale);
+    }
+
+    .big-action.history {
+      background: var(--green-pale);
+    }
+
+    .action-emoji {
+      display: grid;
+      width: 58px;
+      height: 58px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--green-pale);
+      font-size: 31px;
+    }
+
+    .expense .action-emoji {
+      background: rgba(255,255,255,.65);
+    }
+
+    .history .action-emoji {
+      background: rgba(255,255,255,.72);
+    }
+
+    .action-title {
+      display: block;
+      font-size: 19px;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .action-sub {
+      display: block;
+      margin-top: 5px;
+      color: var(--ink-soft);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .arrow {
+      font-size: 25px;
+      font-weight: 900;
+    }
+
+    .mini-summary {
+      margin-top: 28px;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius);
+      padding: 17px;
+      background: rgba(255,255,255,.52);
+    }
+
+    .summary-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .summary-heading strong {
+      font-size: 17px;
+    }
+
+    .summary-heading span {
+      color: var(--ink-soft);
+      font-size: 12px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat {
+      border-radius: 14px;
+      padding: 14px 12px;
+      background: var(--white);
+    }
+
+    .stat span {
+      display: block;
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 23px;
+      line-height: 1.2;
+    }
+
+    .notice {
+      margin-top: 14px;
+      border-left: 5px solid var(--yellow);
+      border-radius: 8px;
+      padding: 11px 12px;
+      color: var(--ink-soft);
+      background: rgba(255,243,188,.65);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    /* 読み取り中 */
+    .loading-screen {
+      min-height: calc(100vh - 120px);
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .loading-panel {
+      width: 100%;
+      padding: 34px 20px;
+    }
+
+    .scan-icon {
+      width: 154px;
+      height: 154px;
+      display: grid;
+      place-items: center;
+      position: relative;
+      margin: 0 auto 30px;
+      border: 3px solid var(--green);
+      border-radius: 24px;
+      color: var(--green-dark);
+      background: rgba(255,255,255,.55);
+      font-size: 57px;
+      overflow: hidden;
+    }
+
+    .scan-line {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      height: 4px;
+      border-radius: 3px;
+      background: var(--red);
+      box-shadow: 0 0 12px rgba(184,68,54,.45);
+      animation: scan 1.5s ease-in-out infinite;
+    }
+
+    @keyframes scan {
+      0%, 100% { top: 20px; }
+      50% { top: 128px; }
+    }
+
+    .spinner {
+      width: 34px;
+      height: 34px;
+      margin: 20px auto 0;
+      border: 5px solid #d9d0b9;
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 確認画面 */
+    .screen.confirm {
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    .screen-intro {
+      padding: 0 16px;
+    }
+
+    .progress {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .progress-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #cbc1aa;
+    }
+
+    .progress-dot.done { background: var(--green); }
+    .progress-dot.now {
+      width: 13px;
+      height: 13px;
+      border: 3px solid var(--green);
+      background: var(--paper);
+    }
+
+    .slip-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 18px 16px 12px;
+      padding: 5px;
+      border-radius: 15px;
+      background: #ded5c1;
+    }
+
+    .slip-tab {
+      min-height: 51px;
+      border: 0;
+      border-radius: 11px;
+      color: var(--ink-soft);
+      background: transparent;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .slip-tab.active {
+      color: var(--green-dark);
+      background: var(--white);
+      box-shadow: 0 3px 9px rgba(52,45,27,.13);
+    }
+
+    .slip-tab .tab-status {
+      display: block;
+      margin-top: 2px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .tab-status.ng { color: var(--red); }
+    .tab-status.ok { color: var(--green); }
+
+    .slip-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 0 16px 10px;
+      color: var(--ink-soft);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .mode-pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 10px;
+      color: var(--green-dark);
+      background: var(--green-pale);
+      font-size: 12px;
+    }
+
+    .result-list {
+      border-top: 1.5px solid var(--line);
+      background: rgba(255,255,255,.45);
+    }
+
+    .result-head,
+    .result-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.8fr) 46px 64px 22px;
+      gap: 7px;
+      align-items: center;
+      padding: 11px 16px;
+    }
+
+    .result-head {
+      color: var(--ink-soft);
+      font-size: 11px;
+      font-weight: 900;
+      text-align: right;
+      background: var(--paper-deep);
+    }
+
+    .result-head span:first-child { text-align: left; }
+
+    .result-row {
+      width: 100%;
+      min-height: 76px;
+      border: 0;
+      border-bottom: 1px solid #d7cdb7;
+      color: var(--ink);
+      text-align: right;
+      background: rgba(255,255,255,.35);
+      cursor: pointer;
+    }
+
+    .result-row .item-name {
+      text-align: left;
+      font-size: 15px;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .result-row .item-name small {
+      display: block;
+      margin-top: 3px;
+      color: var(--ink-soft);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .result-row .qty,
+    .result-row .amount {
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .result-row .edit-arrow {
+      color: var(--ink-soft);
+      font-size: 20px;
+    }
+
+    .result-row.invalid {
+      position: relative;
+      border-left: 7px solid var(--red);
+      background: var(--red-pale);
+    }
+
+    .result-row.validated,
+    .result-row.status-ok {
+      border-left: 7px solid var(--green);
+      background: var(--green-pale);
+      animation: valid-flash .5s ease;
+    }
+
+    .result-row.status-unknown {
+      border-left: 7px solid var(--gray);
+      background: var(--gray-pale);
+    }
+
+    .set-label {
+      display: inline-block !important;
+      margin: 0 0 4px !important;
+      border: 1px solid #936812;
+      border-radius: 999px;
+      padding: 2px 7px;
+      color: #684700 !important;
+      background: var(--gold-pale);
+      font-size: 10px !important;
+      font-weight: 900 !important;
+    }
+
+    @keyframes valid-flash {
+      50% { background: #cce9c0; }
+    }
+
+    .error-banner,
+    .success-banner,
+    .review-banner {
+      margin: 12px 16px;
+      border-radius: 12px;
+      padding: 12px 13px;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.45;
+    }
+
+    .error-banner {
+      color: #7b241d;
+      background: var(--red-pale);
+    }
+
+    .success-banner {
+      color: var(--green-dark);
+      background: var(--green-pale);
+    }
+
+    .review-banner {
+      color: #4d4b44;
+      background: var(--gray-pale);
+    }
+
+    .color-guide {
+      display: grid;
+      gap: 7px;
+      margin: 12px 16px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      padding: 12px;
+      background: rgba(255,255,255,.55);
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .guide-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .guide-dot {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 14px;
+      border-radius: 4px;
+    }
+
+    .guide-dot.green { background: var(--green); }
+    .guide-dot.red { background: var(--red); }
+    .guide-dot.gray { background: var(--gray); }
+
+    .slip-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin: 16px;
+      border-top: 3px double var(--ink);
+      padding: 14px 4px 0;
+      font-weight: 900;
+    }
+
+    .slip-total strong {
+      font-size: 25px;
+    }
+
+    .sticky-action {
+      position: sticky;
+      bottom: 0;
+      z-index: 12;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: linear-gradient(transparent, var(--paper) 18%, var(--paper));
+    }
+
+    .primary-btn,
+    .secondary-btn {
+      width: 100%;
+      min-height: 58px;
+      border-radius: 15px;
+      font-size: 18px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .primary-btn {
+      border: 2px solid var(--green-dark);
+      color: #fff;
+      background: var(--green-dark);
+      box-shadow: 0 5px 0 #1d351f;
+    }
+
+    .primary-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #1d351f;
+    }
+
+    .secondary-btn {
+      border: 2px solid var(--green-dark);
+      color: var(--green-dark);
+      background: var(--white);
+    }
+
+    .text-btn {
+      min-height: 48px;
+      border: 0;
+      color: var(--green-dark);
+      background: transparent;
+      font-weight: 900;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      cursor: pointer;
+    }
+
+    /* 編集シート */
+    .sheet-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+      background: rgba(28,27,23,.52);
+    }
+
+    .sheet-backdrop.open { display: flex; }
+
+    .edit-sheet {
+      width: min(100%, 430px);
+      max-height: 92vh;
+      overflow: auto;
+      border-radius: 24px 24px 0 0;
+      padding: 12px 18px calc(20px + env(safe-area-inset-bottom));
+      background: var(--paper);
+      box-shadow: 0 -10px 40px rgba(0,0,0,.25);
+      animation: sheet-up .25s ease-out;
+    }
+
+    @keyframes sheet-up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .sheet-handle {
+      width: 58px;
+      height: 5px;
+      margin: 0 auto 12px;
+      border-radius: 99px;
+      background: #a89f8c;
+    }
+
+    .edit-sheet h3 {
+      margin: 0 0 14px;
+      font-size: 21px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-top: 14px;
+    }
+
+    .field label {
+      color: var(--ink-soft);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .field select,
+    .field input {
+      width: 100%;
+      min-height: 54px;
+      border: 2px solid var(--line);
+      border-radius: 13px;
+      padding: 10px 12px;
+      color: var(--ink);
+      background: var(--white);
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .quantity-display {
+      display: grid;
+      grid-template-columns: 58px 1fr 58px;
+      gap: 9px;
+      align-items: center;
+    }
+
+    .stepper {
+      height: 58px;
+      border: 2px solid var(--green-dark);
+      border-radius: 14px;
+      color: var(--green-dark);
+      background: var(--white);
+      font-size: 28px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    #qtyDisplay {
+      min-height: 58px;
+      display: grid;
+      place-items: center;
+      border: 3px solid var(--ink);
+      border-radius: 14px;
+      background: #fff;
+      font-size: 30px;
+      font-weight: 900;
+    }
+
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .key {
+      min-height: 51px;
+      border: 1.5px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      background: var(--white);
+      font-size: 22px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .key.special {
+      color: var(--green-dark);
+      background: var(--green-pale);
+      font-size: 15px;
+    }
+
+    .edit-calc {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin: 16px 0;
+      border-radius: 12px;
+      padding: 12px;
+      background: var(--paper-deep);
+      font-weight: 800;
+    }
+
+    .edit-calc strong {
+      font-size: 23px;
+    }
+
+    .sheet-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1.7fr;
+      gap: 10px;
+    }
+
+    /* 経費 */
+    .receipt-preview {
+      position: relative;
+      margin: 18px 0;
+      border: 1px solid #c9c0ad;
+      padding: 18px 16px;
+      background: #fff;
+      box-shadow: 0 5px 12px rgba(66,54,33,.12);
+    }
+
+    .receipt-preview::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: -7px;
+      left: 0;
+      height: 8px;
+      background: linear-gradient(135deg, transparent 5px, #fff 0) 0 0 / 10px 8px repeat-x;
+    }
+
+    .receipt-label {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .receipt-preview input,
+    .receipt-preview select {
+      width: 100%;
+      min-height: 50px;
+      margin-bottom: 15px;
+      border: 0;
+      border-bottom: 2px solid #bdb4a2;
+      padding: 7px 4px;
+      color: var(--ink);
+      background: transparent;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .receipt-preview input[type="number"] {
+      font-size: 27px;
+      text-align: right;
+    }
+
+    /* 完了 */
+    .complete-wrap {
+      min-height: calc(100vh - 130px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .complete-mark {
+      width: 98px;
+      height: 98px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 18px;
+      border: 4px solid var(--green);
+      border-radius: 50%;
+      color: var(--green);
+      background: var(--green-pale);
+      font-size: 50px;
+      font-weight: 900;
+      animation: pop .45s ease-out;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(.65); opacity: 0; }
+      70% { transform: scale(1.08); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .complete-card {
+      margin: 22px 0;
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      padding: 18px;
+      background: var(--white);
+    }
+
+    .complete-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .complete-stats div {
+      padding: 12px 7px;
+      border-radius: 12px;
+      background: var(--paper-deep);
+    }
+
+    .complete-stats span {
+      display: block;
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .complete-stats strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 22px;
+    }
+
+    .complete-actions {
+      display: grid;
+      gap: 11px;
+    }
+
+    .csv-btn {
+      min-height: 54px;
+      border: 2px dashed var(--green);
+      border-radius: 14px;
+      color: var(--green-dark);
+      background: var(--green-pale);
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .import-options {
+      display: grid;
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .import-option {
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 68px;
+      border: 2px solid var(--ink);
+      border-radius: 15px;
+      padding: 10px 14px;
+      color: var(--ink);
+      text-align: left;
+      background: var(--white);
+      font-size: 17px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .import-option .emoji { font-size: 28px; }
+    .import-option .arrow { font-size: 28px; }
+
+    .history-screen { padding-bottom: 44px; }
+
+    .month-switch {
+      display: grid;
+      grid-template-columns: 48px 1fr 48px;
+      align-items: center;
+      gap: 8px;
+      margin: 18px 0;
+    }
+
+    .month-arrow {
+      min-height: 46px;
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+      color: var(--ink);
+      background: var(--white);
+      font-size: 22px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .month-label { text-align: center; font-size: 20px; font-weight: 900; }
+
+    .history-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .history-card {
+      border: 2px solid var(--ink);
+      border-radius: 14px;
+      padding: 12px 5px;
+      text-align: center;
+      background: var(--white);
+    }
+
+    .history-card span { display: block; color: var(--ink-soft); font-size: 11px; font-weight: 800; }
+    .history-card strong { display: block; margin-top: 5px; font-size: 15px; }
+    .history-card.balance { background: var(--green-pale); }
+
+    .history-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .history-tab {
+      min-height: 46px;
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+      color: var(--ink);
+      background: var(--white);
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .history-tab.active { color: #fff; background: var(--green-dark); }
+
+    .history-panel {
+      margin: 14px 0;
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: var(--white);
+    }
+
+    .history-panel h3 { margin: 0 0 14px; font-size: 17px; }
+
+    .bar-chart {
+      display: flex;
+      align-items: end;
+      justify-content: space-around;
+      height: 150px;
+      border-bottom: 2px solid var(--ink);
+      padding: 8px 2px 0;
+    }
+
+    .bar-column {
+      display: flex;
+      flex-direction: column;
+      justify-content: end;
+      align-items: center;
+      width: 12%;
+      height: 100%;
+      gap: 5px;
+      color: var(--ink-soft);
+      font-size: 10px;
+      font-weight: 800;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .bar {
+      width: 100%;
+      min-height: 8px;
+      border-radius: 7px 7px 0 0;
+      background: var(--green);
+    }
+
+    .bar-column.active .bar { background: var(--gold); }
+    .bar-column.active { color: var(--ink); }
+
+    .history-filter {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin: -2px 0 10px;
+      border-radius: 10px;
+      padding: 9px 11px;
+      background: var(--paper-deep);
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .history-filter button {
+      border: 0;
+      padding: 5px 8px;
+      color: var(--green-dark);
+      background: transparent;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .date-group { margin-top: 16px; }
+    .date-group:first-child { margin-top: 0; }
+
+    .date-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      border-radius: 11px;
+      padding: 11px 12px;
+      color: #fff;
+      background: var(--green-dark);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .date-heading strong { white-space: nowrap; }
+
+    .detail-row.grouped { grid-template-columns: 1fr auto 18px; }
+
+    .empty-history {
+      padding: 22px 6px;
+      color: var(--ink-soft);
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .rank-row, .detail-row {
+      display: grid;
+      align-items: center;
+      gap: 10px;
+      min-height: 50px;
+      border-top: 1px solid #ded8cd;
+    }
+
+    .rank-row { grid-template-columns: 28px 1fr auto; }
+    .rank-row:first-child, .detail-row:first-child { border-top: 0; }
+    .rank-number { color: var(--gold); font-size: 20px; font-weight: 900; }
+
+    .detail-row {
+      width: 100%;
+      grid-template-columns: 52px 1fr auto 18px;
+      border-right: 0;
+      border-bottom: 0;
+      border-left: 0;
+      padding: 8px 0;
+      color: var(--ink);
+      text-align: left;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .detail-main strong, .detail-main small { display: block; }
+    .detail-main small { margin-top: 3px; color: var(--ink-soft); }
+    .detail-amount { font-weight: 900; }
+
+    .detail-sheet-body {
+      margin: 16px 0;
+      border-radius: 14px;
+      padding: 16px;
+      background: var(--paper-deep);
+      line-height: 1.9;
+    }
+
+    .detail-sheet-body strong { display: block; font-size: 20px; }
+
+    .toast {
+      position: fixed;
+      z-index: 100;
+      right: 18px;
+      bottom: calc(20px + env(safe-area-inset-bottom));
+      left: 18px;
+      max-width: 394px;
+      margin: auto;
+      border-radius: 13px;
+      padding: 14px 16px;
+      color: #fff;
+      text-align: center;
+      background: var(--ink);
+      box-shadow: var(--shadow);
+      font-weight: 800;
+      opacity: 0;
+      transform: translateY(20px);
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (min-width: 431px) {
+      body { padding: 20px 0; }
+      .app {
+        min-height: calc(100vh - 40px);
+        border-radius: 26px;
+      }
+      .sheet-backdrop { padding-bottom: 20px; }
+      .edit-sheet { border-radius: 24px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="header-row">
+        <button class="header-icon" id="backButton" type="button" aria-label="前の画面へ" hidden>‹</button>
+        <h1 class="brand">和古<small>売上・経費</small></h1>
+        <button class="header-icon" id="homeButton" type="button" aria-label="ホームへ" hidden>⌂</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="screen active" id="homeScreen" aria-labelledby="homeTitle">
+        <p class="eyebrow">今日も、簡単記録</p>
+        <h2 id="homeTitle">何を読み取りますか？</h2>
+        <p class="lead">紙を撮ったあとは、内容を確認して保存するだけです。</p>
+
+        <div class="action-stack">
+          <button class="big-action" type="button" data-open-reader="sales">
+            <span class="action-emoji" aria-hidden="true">📷</span>
+            <span>
+              <span class="action-title">売上を<br>読み取る</span>
+              <span class="action-sub">伝票の内容を確認します</span>
+            </span>
+            <span class="arrow" aria-hidden="true">›</span>
+          </button>
+
+          <button class="big-action expense" type="button" data-open-reader="expense">
+            <span class="action-emoji" aria-hidden="true">🧾</span>
+            <span>
+              <span class="action-title">経費を<br>読み取る</span>
+              <span class="action-sub">店名・金額を確認します</span>
+            </span>
+            <span class="arrow" aria-hidden="true">›</span>
+          </button>
+
+          <button class="big-action history" id="historyButton" type="button">
+            <span class="action-emoji" aria-hidden="true">📊</span>
+            <span>
+              <span class="action-title">過去のデータを見る</span>
+              <span class="action-sub">月ごとの売上と経費</span>
+            </span>
+            <span class="arrow" aria-hidden="true">›</span>
+          </button>
+        </div>
+
+        <div class="mini-summary" aria-label="今月のミニ集計">
+          <div class="summary-heading">
+            <strong>8月の記録</strong>
+            <span>8月2日 現在</span>
+          </div>
+          <div class="stat-grid">
+            <div class="stat"><span>売上</span><strong>42,680円</strong></div>
+            <div class="stat"><span>経費</span><strong>12,430円</strong></div>
+          </div>
+          <div class="notice">これは操作感を試す見本です。表示される数字はすべてダミーです。</div>
+        </div>
+      </section>
+
+      <section class="screen" id="loadingScreen" aria-labelledby="loadingTitle" aria-live="polite">
+        <div class="loading-screen">
+          <div class="loading-panel">
+            <div class="scan-icon" aria-hidden="true">
+              <span id="loadingEmoji">📄</span>
+              <span class="scan-line"></span>
+            </div>
+            <p class="eyebrow">読み取り中</p>
+            <h2 id="loadingTitle">伝票を読んでいます…</h2>
+            <p class="lead" id="loadingHint">文字と数字を一つずつ確認しています</p>
+            <div class="spinner" aria-hidden="true"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen confirm" id="salesConfirmScreen" aria-labelledby="salesConfirmTitle">
+        <div class="screen-intro">
+          <div class="progress" aria-label="3段階中2番目">
+            <span class="progress-dot done"></span><span>読み取り</span>
+            <span>—</span><span class="progress-dot now"></span><span>確認</span>
+            <span>—</span><span class="progress-dot"></span><span>保存</span>
+          </div>
+          <p class="eyebrow">色を見て確認してください</p>
+          <h2 id="salesConfirmTitle">売上の確認</h2>
+        </div>
+
+        <div class="slip-tabs" role="tablist" aria-label="伝票切り替え">
+          <button class="slip-tab active" type="button" role="tab" aria-selected="true" data-slip="0">
+            伝票 1<span class="tab-status ng">1箇所 要確認</span>
+          </button>
+          <button class="slip-tab" type="button" role="tab" aria-selected="false" data-slip="1">
+            伝票 2<span class="tab-status ok">確認OK</span>
+          </button>
+        </div>
+
+        <div class="slip-meta">
+          <span id="slipDate">8月2日　No. 12</span>
+          <span class="mode-pill" id="slipMode">店内</span>
+        </div>
+
+        <div id="validationBanner" class="error-banner">⚠ 個数×単価と金額が合いません。赤い行をタップしてください。</div>
+
+        <div class="color-guide" aria-label="確認の色の説明">
+          <div class="guide-row"><span class="guide-dot green"></span><strong>緑</strong><span>計算が合っています</span></div>
+          <div class="guide-row"><span class="guide-dot red"></span><strong>赤</strong><span>計算が合いません</span></div>
+          <div class="guide-row"><span class="guide-dot gray"></span><strong>灰</strong><span>金額の記入がなく、計算できません</span></div>
+          <p>実際の伝票では10行中7行が灰色でした。灰色は、人が確認する大切な行です。</p>
+        </div>
+
+        <div class="result-list" aria-label="読み取り結果">
+          <div class="result-head" aria-hidden="true">
+            <span>品目／単価</span><span>個数</span><span>金額</span><span></span>
+          </div>
+          <div id="salesRows"></div>
+        </div>
+
+        <div class="slip-total">
+          <span>この伝票の合計</span>
+          <strong id="slipTotal">0円</strong>
+        </div>
+
+        <div class="sticky-action">
+          <button class="primary-btn" id="saveSalesButton" type="button">✔ 確定して保存</button>
+        </div>
+      </section>
+
+      <section class="screen confirm" id="expenseConfirmScreen" aria-labelledby="expenseConfirmTitle">
+        <div class="screen-intro">
+          <div class="progress" aria-label="3段階中2番目">
+            <span class="progress-dot done"></span><span>読み取り</span>
+            <span>—</span><span class="progress-dot now"></span><span>確認</span>
+            <span>—</span><span class="progress-dot"></span><span>保存</span>
+          </div>
+          <p class="eyebrow">読み取り結果を確認してください</p>
+          <h2 id="expenseConfirmTitle">経費の確認</h2>
+          <p class="lead">誤りがある場合は、枠内をタップして修正できます。</p>
+        </div>
+
+        <form id="expenseForm" class="receipt-preview">
+          <label class="receipt-label" for="expenseCategory">項目</label>
+          <select id="expenseCategory">
+            <option>食材</option>
+            <option>消耗品</option>
+            <option>包装資材</option>
+            <option>交通費</option>
+            <option>その他</option>
+          </select>
+
+          <label class="receipt-label" for="expenseStore">店名</label>
+          <input id="expenseStore" type="text" value="産直市場 みのり" autocomplete="off">
+
+          <label class="receipt-label" for="expenseAmount">金額</label>
+          <input id="expenseAmount" type="number" inputmode="numeric" value="3280" min="0">
+
+          <label class="receipt-label" for="expenseDate">日付</label>
+          <input id="expenseDate" type="date" value="2026-08-02">
+        </form>
+
+        <div class="notice">文字はよく読めています。写真は保存されません（見本画面）。</div>
+
+        <div class="sticky-action">
+          <button class="primary-btn" id="saveExpenseButton" type="button">✔ 確定して保存</button>
+        </div>
+      </section>
+
+      <section class="screen" id="completeScreen" aria-labelledby="completeTitle">
+        <div class="complete-wrap">
+          <div class="complete-mark" aria-hidden="true">✓</div>
+          <p class="eyebrow">保存できました</p>
+          <h2 id="completeTitle">保存できました</h2>
+          <p class="lead" id="completeMessage">今日の売上に追加しました。</p>
+
+          <div class="complete-card">
+            <div class="complete-stats">
+              <div><span>本日の件数</span><strong id="completeCount">3件</strong></div>
+              <div><span>本日の合計</span><strong id="completeTotal">5,160円</strong></div>
+            </div>
+          </div>
+
+          <div class="complete-actions">
+            <button class="csv-btn" id="csvButton" type="button">⇩ CSVをダウンロード</button>
+            <button class="primary-btn" id="continueButton" type="button">📷 続けて読み取る</button>
+            <button class="text-btn" id="completeHomeButton" type="button">ホームへ戻る</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen history-screen" id="historyScreen" aria-labelledby="historyTitle">
+        <p class="eyebrow">月ごとの記録</p>
+        <h2 id="historyTitle">過去のデータ</h2>
+
+        <div class="month-switch" aria-label="月を切り替える">
+          <button class="month-arrow" id="prevMonthButton" type="button" aria-label="前の月">◀</button>
+          <div class="month-label" id="historyMonth">2026年8月</div>
+          <button class="month-arrow" id="nextMonthButton" type="button" aria-label="次の月">▶</button>
+        </div>
+
+        <div class="history-summary">
+          <div class="history-card"><span>売上合計</span><strong id="historySales">0円</strong></div>
+          <div class="history-card"><span>経費合計</span><strong id="historyExpense">0円</strong></div>
+          <div class="history-card balance"><span>差引</span><strong id="historyBalance">0円</strong></div>
+        </div>
+
+        <div class="history-tabs" role="tablist" aria-label="売上と経費">
+          <button class="history-tab active" type="button" role="tab" aria-selected="true" data-history-tab="sales">売上</button>
+          <button class="history-tab" type="button" role="tab" aria-selected="false" data-history-tab="expense">経費</button>
+        </div>
+
+        <div class="history-panel">
+          <h3>日ごとの金額</h3>
+          <div class="bar-chart" id="historyChart" aria-label="日ごとの棒グラフ"></div>
+        </div>
+
+        <div class="history-panel">
+          <h3 id="rankingTitle">よく売れた品目 上位5つ</h3>
+          <div id="historyRanking"></div>
+        </div>
+
+        <div class="history-panel">
+          <h3>明細</h3>
+          <div class="history-filter" id="historyFilter"><span>月内の全日を表示</span><button id="clearDayFilterButton" type="button" hidden>絞り込みを解除</button></div>
+          <div id="historyDetails"></div>
+        </div>
+
+        <button class="csv-btn" id="historyCsvButton" type="button">⇩ CSVで書き出す</button>
+      </section>
+    </main>
+  </div>
+
+  <div class="sheet-backdrop" id="importBackdrop" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+    <div class="edit-sheet">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <p class="eyebrow">読み取り方法を選ぶ</p>
+      <h3 id="importTitle">売上を読み取る</h3>
+      <div class="import-options">
+        <button class="import-option" type="button" data-import-method="camera"><span class="emoji">📷</span><span>写真を撮る</span><span class="arrow">›</span></button>
+        <button class="import-option" type="button" data-import-method="album"><span class="emoji">🖼</span><span>アルバムから選ぶ</span><span class="arrow">›</span></button>
+      </div>
+      <button class="secondary-btn" id="cancelImportButton" type="button">キャンセル</button>
+    </div>
+  </div>
+
+  <div class="sheet-backdrop" id="detailBackdrop" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <div class="edit-sheet">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <p class="eyebrow">伝票の明細</p>
+      <h3 id="detailTitle">伝票 No.</h3>
+      <div class="detail-sheet-body" id="detailBody"></div>
+      <button class="primary-btn" id="closeDetailButton" type="button">閉じる</button>
+    </div>
+  </div>
+
+  <div class="sheet-backdrop" id="editBackdrop" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <div class="edit-sheet">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h3 id="editTitle">品目と個数を直す</h3>
+
+      <div class="field">
+        <label for="itemSelect">品目</label>
+        <select id="itemSelect"></select>
+      </div>
+
+      <div class="field">
+        <label>個数</label>
+        <div class="quantity-display">
+          <button class="stepper" id="minusButton" type="button" aria-label="個数を1減らす">−</button>
+          <output id="qtyDisplay" aria-live="polite">1</output>
+          <button class="stepper" id="plusButton" type="button" aria-label="個数を1増やす">＋</button>
+        </div>
+        <div class="keypad" aria-label="個数テンキー">
+          <button class="key" type="button" data-key="1">1</button>
+          <button class="key" type="button" data-key="2">2</button>
+          <button class="key" type="button" data-key="3">3</button>
+          <button class="key" type="button" data-key="4">4</button>
+          <button class="key" type="button" data-key="5">5</button>
+          <button class="key" type="button" data-key="6">6</button>
+          <button class="key" type="button" data-key="7">7</button>
+          <button class="key" type="button" data-key="8">8</button>
+          <button class="key" type="button" data-key="9">9</button>
+          <button class="key special" type="button" data-key="clear">消去</button>
+          <button class="key" type="button" data-key="0">0</button>
+          <button class="key special" type="button" data-key="back">←</button>
+        </div>
+      </div>
+
+      <div class="edit-calc">
+        <span id="editUnitPrice">単価 0円</span>
+        <strong id="editAmount">0円</strong>
+      </div>
+
+      <div class="sheet-buttons">
+        <button class="secondary-btn" id="cancelEditButton" type="button">キャンセル</button>
+        <button class="primary-btn" id="applyEditButton" type="button">この内容に直す</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var masterItems = [
+        { name: "おにぎり（うめ）", price: 200 },
+        { name: "おにぎり（こんぶ）", price: 200 },
+        { name: "おにぎり（塩）", price: 200 },
+        { name: "おにぎり（花むすび）", price: 200 },
+        { name: "おにぎり（さけ）", price: 230 },
+        { name: "おにぎり（ツナマヨ）", price: 230 },
+        { name: "おにぎり（あさりしぐれ）", price: 230 },
+        { name: "おにぎり（とりそぼろ）", price: 230 },
+        { name: "おにぎり（おかかチーズ）", price: 250 },
+        { name: "おにぎり（甘辛からあげマヨ）", price: 250 },
+        { name: "おにぎり（ゆずみそ）", price: 250 },
+        { name: "おにぎり（ピーマン味噌）", price: 250 },
+        { name: "和古セット（800円）", price: 800 },
+        { name: "和古セット（830円）", price: 830 },
+        { name: "和古セット（850円）", price: 850 },
+        { name: "和古セット（860円）", price: 860 },
+        { name: "和古セット（880円）", price: 880 },
+        { name: "和古セット（900円）", price: 900 },
+        { name: "お子様セット", price: 500 },
+        { name: "和古弁当", price: 800 },
+        { name: "みそ汁", price: 200 },
+        { name: "マカロニ", price: 200 },
+        { name: "ゆずみそ（単品）", price: 250 },
+        { name: "ピーマン味噌（単品）", price: 250 },
+        { name: "五平餅", price: 350 },
+        { name: "クッキー", price: 300 },
+        { name: "コーヒー（HOT）", price: 200 },
+        { name: "コーヒー（ICE）", price: 200 },
+        { name: "りんご100%ジュース", price: 200 },
+        { name: "みかん100%ジュース", price: 200 },
+        { name: "しそジュース（水割り）", price: 300 },
+        { name: "しそジュース（炭酸）", price: 350 }
+      ];
+
+      var slips = [
+        {
+          date: "8月2日　No. 12",
+          mode: "店内",
+          rows: [
+            { item: "和古セット（830円）", qty: 1, price: 830, amount: 830, status: "ok" },
+            { item: "おにぎり（さけ）", qty: 2, price: 230, amount: 430, status: "ng" },
+            { item: "コーヒー（HOT）", qty: 1, price: 200, amount: null, status: "unknown" }
+          ]
+        },
+        {
+          date: "8月2日　No. 13",
+          mode: "持ち帰り",
+          rows: [
+            { item: "和古セット（850円）", qty: 1, price: 850, amount: 850, status: "ok" },
+            { item: "おにぎり（甘辛からあげマヨ）", qty: 1, price: 250, amount: 250, status: "ok" },
+            { item: "クッキー", qty: 2, price: 300, amount: 600, status: "ok" }
+          ]
+        }
+      ];
+
+      var historyData = {
+        8: {
+          sales: 42680,
+          expense: 12430,
+          days: [1, 2],
+          bars: { sales: [16680, 26000], expense: [5320, 7110] },
+          rankings: {
+            sales: [["和古セット（830円）", 18], ["おにぎり（さけ）", 14], ["コーヒー（HOT）", 12], ["和古弁当", 9], ["クッキー", 7]],
+            expense: [["食材", 6280], ["包装資材", 2700], ["消耗品", 1850], ["交通費", 900], ["その他", 700]]
+          },
+          details: {
+            sales: [
+              { day: 2, weekday: "日", name: "和古セット（830円）", note: "1個・店内", amount: 830, slip: "260802-1" },
+              { day: 2, weekday: "日", name: "おにぎり（さけ）", note: "2個・店内", amount: 460, slip: "260802-1" },
+              { day: 2, weekday: "日", name: "コーヒー（HOT）", note: "2個・店内", amount: 400, slip: "260802-2" },
+              { day: 2, weekday: "日", name: "和古弁当", note: "4個・持ち帰り", amount: 3200, slip: "260802-3" },
+              { day: 2, weekday: "日", name: "クッキー", note: "3個・持ち帰り", amount: 900, slip: "260802-3" },
+              { day: 1, weekday: "土", name: "和古セット（850円）", note: "2個・店内", amount: 1700, slip: "260801-1" },
+              { day: 1, weekday: "土", name: "おにぎり（うめ）", note: "3個・店内", amount: 600, slip: "260801-1" },
+              { day: 1, weekday: "土", name: "五平餅", note: "2個・持ち帰り", amount: 700, slip: "260801-2" },
+              { day: 1, weekday: "土", name: "しそジュース（水割り）", note: "2個・店内", amount: 600, slip: "260801-3" },
+              { day: 1, weekday: "土", name: "お子様セット", note: "1個・店内", amount: 500, slip: "260801-3" }
+            ],
+            expense: [
+              { day: 2, weekday: "日", name: "産直市場 みのり", note: "食材", amount: 3280, slip: "E-260802-1" },
+              { day: 2, weekday: "日", name: "ホームセンター", note: "包装資材", amount: 1850, slip: "E-260802-2" },
+              { day: 2, weekday: "日", name: "ガソリンスタンド", note: "交通費", amount: 980, slip: "E-260802-3" },
+              { day: 2, weekday: "日", name: "文具店", note: "消耗品", amount: 620, slip: "E-260802-4" },
+              { day: 2, weekday: "日", name: "スーパー", note: "食材", amount: 380, slip: "E-260802-5" },
+              { day: 1, weekday: "土", name: "業務用食材店", note: "食材", amount: 2180, slip: "E-260801-1" },
+              { day: 1, weekday: "土", name: "包装資材店", note: "包装資材", amount: 1260, slip: "E-260801-2" },
+              { day: 1, weekday: "土", name: "ドラッグストア", note: "消耗品", amount: 740, slip: "E-260801-3" },
+              { day: 1, weekday: "土", name: "駐車場", note: "交通費", amount: 600, slip: "E-260801-4" },
+              { day: 1, weekday: "土", name: "スーパー", note: "食材", amount: 540, slip: "E-260801-5" }
+            ]
+          }
+        },
+        7: {
+          sales: 98640,
+          expense: 31820,
+          days: [27, 28],
+          bars: { sales: [47640, 51000], expense: [14820, 17000] },
+          rankings: {
+            sales: [["和古セット（850円）", 31], ["和古弁当", 27], ["おにぎり（うめ）", 24], ["コーヒー（ICE）", 19], ["五平餅", 15]],
+            expense: [["食材", 16200], ["包装資材", 6800], ["消耗品", 4520], ["交通費", 2800], ["その他", 1500]]
+          },
+          details: {
+            sales: [
+              { day: 28, weekday: "火", name: "和古セット（850円）", note: "2個・店内", amount: 1700, slip: "260728-1" },
+              { day: 28, weekday: "火", name: "和古弁当", note: "4個・持ち帰り", amount: 3200, slip: "260728-2" },
+              { day: 28, weekday: "火", name: "おにぎり（うめ）", note: "3個・店内", amount: 600, slip: "260728-2" },
+              { day: 28, weekday: "火", name: "コーヒー（ICE）", note: "4個・店内", amount: 800, slip: "260728-3" },
+              { day: 28, weekday: "火", name: "五平餅", note: "2個・持ち帰り", amount: 700, slip: "260728-3" },
+              { day: 27, weekday: "月", name: "和古セット（830円）", note: "3個・店内", amount: 2490, slip: "260727-1" },
+              { day: 27, weekday: "月", name: "おにぎり（さけ）", note: "4個・店内", amount: 920, slip: "260727-1" },
+              { day: 27, weekday: "月", name: "クッキー", note: "3個・持ち帰り", amount: 900, slip: "260727-2" },
+              { day: 27, weekday: "月", name: "お子様セット", note: "2個・店内", amount: 1000, slip: "260727-3" },
+              { day: 27, weekday: "月", name: "みそ汁", note: "2個・店内", amount: 400, slip: "260727-3" }
+            ],
+            expense: [
+              { day: 28, weekday: "火", name: "業務用食材店", note: "食材", amount: 5420, slip: "E-260728-1" },
+              { day: 28, weekday: "火", name: "包装資材店", note: "包装資材", amount: 2680, slip: "E-260728-2" },
+              { day: 28, weekday: "火", name: "ドラッグストア", note: "消耗品", amount: 1280, slip: "E-260728-3" },
+              { day: 28, weekday: "火", name: "駐車場", note: "交通費", amount: 700, slip: "E-260728-4" },
+              { day: 28, weekday: "火", name: "スーパー", note: "食材", amount: 1440, slip: "E-260728-5" },
+              { day: 27, weekday: "月", name: "産直市場", note: "食材", amount: 4860, slip: "E-260727-1" },
+              { day: 27, weekday: "月", name: "ホームセンター", note: "包装資材", amount: 2380, slip: "E-260727-2" },
+              { day: 27, weekday: "月", name: "文具店", note: "消耗品", amount: 940, slip: "E-260727-3" },
+              { day: 27, weekday: "月", name: "ガソリンスタンド", note: "交通費", amount: 1800, slip: "E-260727-4" },
+              { day: 27, weekday: "月", name: "スーパー", note: "食材", amount: 1120, slip: "E-260727-5" }
+            ]
+          }
+        }
+      };
+
+      var currentScreen = "homeScreen";
+      var currentFlow = "sales";
+      var currentSlip = 0;
+      var currentHistoryMonth = 8;
+      var currentHistoryTab = "sales";
+      var currentHistoryDay = null;
+      var editingRow = -1;
+      var editingQty = 1;
+      var loadingTimer = null;
+      var toastTimer = null;
+
+      var screens = Array.prototype.slice.call(document.querySelectorAll(".screen"));
+      var backButton = document.getElementById("backButton");
+      var homeButton = document.getElementById("homeButton");
+      var itemSelect = document.getElementById("itemSelect");
+      var qtyDisplay = document.getElementById("qtyDisplay");
+      var editBackdrop = document.getElementById("editBackdrop");
+      var importBackdrop = document.getElementById("importBackdrop");
+      var detailBackdrop = document.getElementById("detailBackdrop");
+      var toast = document.getElementById("toast");
+
+      function yen(value) {
+        return Number(value || 0).toLocaleString("ja-JP") + "円";
+      }
+
+      function showScreen(id) {
+        screens.forEach(function (screen) {
+          screen.classList.toggle("active", screen.id === id);
+        });
+        currentScreen = id;
+        backButton.hidden = id === "homeScreen" || id === "loadingScreen" || id === "completeScreen";
+        homeButton.hidden = id === "homeScreen" || id === "loadingScreen";
+        window.scrollTo(0, 0);
+      }
+
+      function goHome() {
+        if (loadingTimer) {
+          window.clearTimeout(loadingTimer);
+          loadingTimer = null;
+        }
+        closeEditor();
+        closeImportSheet();
+        closeDetail();
+        showScreen("homeScreen");
+      }
+
+      function openImportSheet(flow) {
+        currentFlow = flow;
+        document.getElementById("importTitle").textContent = flow === "sales" ? "売上を読み取る" : "経費を読み取る";
+        importBackdrop.classList.add("open");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeImportSheet() {
+        importBackdrop.classList.remove("open");
+        if (!editBackdrop.classList.contains("open") && !detailBackdrop.classList.contains("open")) document.body.style.overflow = "";
+      }
+
+      function startReading(flow, method) {
+        currentFlow = flow;
+        var methodNames = { camera: "写真", album: "アルバム" };
+        document.getElementById("loadingEmoji").textContent = flow === "sales" ? "📷" : "🧾";
+        document.getElementById("loadingTitle").textContent =
+          flow === "sales" ? "伝票を読んでいます…" : "レシートを読んでいます…";
+        document.getElementById("loadingHint").textContent =
+          (methodNames[method] || "データ") + "から文字と数字を確認しています";
+        showScreen("loadingScreen");
+        loadingTimer = window.setTimeout(function () {
+          loadingTimer = null;
+          if (flow === "sales") {
+            currentSlip = 0;
+            renderSales();
+            showScreen("salesConfirmScreen");
+          } else {
+            showScreen("expenseConfirmScreen");
+          }
+        }, 1900);
+      }
+
+      function slipHasError(index) {
+        return slips[index].rows.some(function (row) { return row.status === "ng"; });
+      }
+
+      function slipNeedsReview(index) {
+        return slips[index].rows.some(function (row) { return row.status !== "ok"; });
+      }
+
+      function updateTabs() {
+        document.querySelectorAll(".slip-tab").forEach(function (tab, index) {
+          var active = index === currentSlip;
+          var redCount = slips[index].rows.filter(function (row) { return row.status === "ng"; }).length;
+          var grayCount = slips[index].rows.filter(function (row) { return row.status === "unknown"; }).length;
+          var needsReview = redCount + grayCount > 0;
+          tab.classList.toggle("active", active);
+          tab.setAttribute("aria-selected", active ? "true" : "false");
+          var status = tab.querySelector(".tab-status");
+          status.textContent = needsReview ? (redCount ? "赤" + redCount : "") + (redCount && grayCount ? "・" : "") + (grayCount ? "灰" + grayCount : "") : "確認OK";
+          status.className = "tab-status " + (needsReview ? "ng" : "ok");
+        });
+      }
+
+      function renderSales() {
+        var slip = slips[currentSlip];
+        var container = document.getElementById("salesRows");
+        var banner = document.getElementById("validationBanner");
+        var hasError = slipHasError(currentSlip);
+        var hasUnknown = slip.rows.some(function (row) { return row.status === "unknown"; });
+        var unknownCount = 0;
+        var total = 0;
+
+        container.innerHTML = "";
+        slip.rows.forEach(function (row, index) {
+          if (row.amount !== null) total += row.amount;
+          if (row.status === "unknown") unknownCount += 1;
+          var button = document.createElement("button");
+          button.type = "button";
+          button.className = "result-row status-" + row.status + (row.status === "ng" ? " invalid" : "");
+          button.setAttribute("aria-label", row.item + "、個数" + row.qty + "、金額" + (row.amount === null ? "未記入" : yen(row.amount)) + "。押して確認");
+
+          var name = document.createElement("span");
+          name.className = "item-name";
+          if (row.item.indexOf("セット") !== -1) {
+            var setLabel = document.createElement("span");
+            setLabel.className = "set-label";
+            setLabel.textContent = "セット";
+            name.appendChild(setLabel);
+          }
+          name.appendChild(document.createTextNode(row.item));
+          var sub = document.createElement("small");
+          sub.textContent = "単価 " + yen(row.price);
+          name.appendChild(sub);
+
+          var qty = document.createElement("span");
+          qty.className = "qty";
+          qty.textContent = row.qty;
+
+          var amount = document.createElement("span");
+          amount.className = "amount";
+          amount.textContent = row.amount === null ? "—" : row.amount.toLocaleString("ja-JP");
+
+          var arrow = document.createElement("span");
+          arrow.className = "edit-arrow";
+          arrow.setAttribute("aria-hidden", "true");
+          arrow.textContent = "›";
+
+          button.appendChild(name);
+          button.appendChild(qty);
+          button.appendChild(amount);
+          button.appendChild(arrow);
+          button.addEventListener("click", function () { openEditor(index); });
+          container.appendChild(button);
+        });
+
+        document.getElementById("slipDate").textContent = slip.date;
+        document.getElementById("slipMode").textContent = slip.mode;
+        document.getElementById("slipTotal").textContent = yen(total) + (unknownCount ? " ＋ 未記入" + unknownCount + "件" : "");
+        banner.className = hasError ? "error-banner" : hasUnknown ? "review-banner" : "success-banner";
+        banner.textContent = hasError
+          ? "⚠ 計算が合わない行があります。赤い行を押して直してください。"
+          : hasUnknown
+            ? "● 金額が書かれていない行があります。灰色の行を押して確認してください。"
+            : "✓ すべての行を確認できました。";
+        updateTabs();
+      }
+
+      function fillMasterSelect() {
+        masterItems.forEach(function (item) {
+          var option = document.createElement("option");
+          option.value = item.name;
+          option.textContent = item.name + "　" + yen(item.price);
+          itemSelect.appendChild(option);
+        });
+      }
+
+      function selectedMasterItem() {
+        return masterItems.find(function (item) { return item.name === itemSelect.value; }) || masterItems[0];
+      }
+
+      function openEditor(index) {
+        var row = slips[currentSlip].rows[index];
+        editingRow = index;
+        editingQty = row.qty;
+        itemSelect.value = row.item;
+        qtyDisplay.textContent = editingQty;
+        updateEditCalculation();
+        editBackdrop.classList.add("open");
+        document.body.style.overflow = "hidden";
+        window.setTimeout(function () { itemSelect.focus(); }, 50);
+      }
+
+      function closeEditor() {
+        editBackdrop.classList.remove("open");
+        if (!importBackdrop.classList.contains("open") && !detailBackdrop.classList.contains("open")) document.body.style.overflow = "";
+        editingRow = -1;
+      }
+
+      function updateEditCalculation() {
+        var item = selectedMasterItem();
+        qtyDisplay.textContent = editingQty;
+        document.getElementById("editUnitPrice").textContent = "単価 " + yen(item.price);
+        document.getElementById("editAmount").textContent = yen(item.price * editingQty);
+      }
+
+      function setEditingQty(value) {
+        editingQty = Math.max(0, Math.min(99, Number(value) || 0));
+        updateEditCalculation();
+      }
+
+      function applyEdit() {
+        if (editingRow < 0) return;
+        var item = selectedMasterItem();
+        var row = slips[currentSlip].rows[editingRow];
+        row.item = item.name;
+        row.price = item.price;
+        row.qty = editingQty;
+        row.amount = item.price * editingQty;
+        row.status = "ok";
+        closeEditor();
+        renderSales();
+        showToast("確認しました。緑になりました");
+      }
+
+      function saveSales() {
+        var firstErrorSlip = slips.findIndex(function (_, index) { return slipNeedsReview(index); });
+        if (firstErrorSlip !== -1) {
+          currentSlip = firstErrorSlip;
+          renderSales();
+          showToast("赤または灰色の行を確認してください");
+          window.scrollTo({ top: 110, behavior: "smooth" });
+          return;
+        }
+        var grandTotal = slips.reduce(function (sum, slip) {
+          return sum + slip.rows.reduce(function (slipSum, row) { return slipSum + (row.amount || 0); }, 0);
+        }, 0);
+        document.getElementById("completeMessage").textContent = "今日の売上に2枚分を追加しました。";
+        document.getElementById("completeCount").textContent = "2件";
+        document.getElementById("completeTotal").textContent = yen(grandTotal);
+        showScreen("completeScreen");
+      }
+
+      function renderHistory() {
+        var data = historyData[currentHistoryMonth];
+        var values = data.bars[currentHistoryTab];
+        var maxValue = Math.max.apply(null, values);
+        document.getElementById("historyMonth").textContent = "2026年" + currentHistoryMonth + "月";
+        document.getElementById("historySales").textContent = yen(data.sales);
+        document.getElementById("historyExpense").textContent = yen(data.expense);
+        document.getElementById("historyBalance").textContent = yen(data.sales - data.expense);
+
+        document.querySelectorAll("[data-history-tab]").forEach(function (tab) {
+          var active = tab.getAttribute("data-history-tab") === currentHistoryTab;
+          tab.classList.toggle("active", active);
+          tab.setAttribute("aria-selected", active ? "true" : "false");
+        });
+
+        var chart = document.getElementById("historyChart");
+        chart.innerHTML = "";
+        values.forEach(function (value, index) {
+          var day = data.days[index];
+          var column = document.createElement("button");
+          column.type = "button";
+          column.className = "bar-column" + (currentHistoryDay === day ? " active" : "");
+          column.setAttribute("aria-label", currentHistoryMonth + "月" + day + "日の明細に絞り込む");
+          var bar = document.createElement("span");
+          bar.className = "bar";
+          bar.style.height = Math.max(8, Math.round(value / maxValue * 112)) + "px";
+          var label = document.createElement("span");
+          label.textContent = day + "日";
+          column.appendChild(bar);
+          column.appendChild(label);
+          column.addEventListener("click", function () {
+            currentHistoryDay = currentHistoryDay === day ? null : day;
+            renderHistory();
+          });
+          chart.appendChild(column);
+        });
+
+        document.getElementById("rankingTitle").textContent = currentHistoryTab === "sales" ? "よく売れた品目 上位5つ" : "経費の項目 上位5つ";
+        var ranking = document.getElementById("historyRanking");
+        ranking.innerHTML = "";
+        data.rankings[currentHistoryTab].forEach(function (entry, index) {
+          var row = document.createElement("div");
+          row.className = "rank-row";
+          row.innerHTML = '<span class="rank-number">' + (index + 1) + '</span><strong>' + entry[0] + '</strong><span>' + (currentHistoryTab === "sales" ? entry[1] + "個" : yen(entry[1])) + '</span>';
+          ranking.appendChild(row);
+        });
+
+        var details = document.getElementById("historyDetails");
+        details.innerHTML = "";
+        var filter = document.getElementById("historyFilter");
+        filter.querySelector("span").textContent = currentHistoryDay === null ? "月内の全日を表示" : currentHistoryMonth + "月" + currentHistoryDay + "日のみ表示";
+        document.getElementById("clearDayFilterButton").hidden = currentHistoryDay === null;
+
+        var visibleEntries = data.details[currentHistoryTab].filter(function (entry) {
+          return currentHistoryDay === null || entry.day === currentHistoryDay;
+        });
+        var days = data.days.slice().sort(function (a, b) { return b - a; });
+        days.forEach(function (day) {
+          var dayEntries = visibleEntries.filter(function (entry) { return entry.day === day; });
+          if (!dayEntries.length) return;
+          var group = document.createElement("section");
+          group.className = "date-group";
+          var total = dayEntries.reduce(function (sum, entry) { return sum + entry.amount; }, 0);
+          var heading = document.createElement("div");
+          heading.className = "date-heading";
+          heading.innerHTML = '<strong>' + currentHistoryMonth + '月' + day + '日（' + dayEntries[0].weekday + '）</strong><span>' + dayEntries.length + '件　' + yen(total) + '</span>';
+          group.appendChild(heading);
+          dayEntries.forEach(function (entry) {
+            var row = document.createElement("button");
+            row.className = "detail-row grouped";
+            row.type = "button";
+            row.innerHTML = '<span class="detail-main"><strong>' + entry.name + '</strong><small>' + entry.note + '</small></span><span class="detail-amount">' + yen(entry.amount) + '</span><span>›</span>';
+            row.addEventListener("click", function () { openDetail(entry); });
+            group.appendChild(row);
+          });
+          details.appendChild(group);
+        });
+        if (!visibleEntries.length) details.innerHTML = '<div class="empty-history">この日の明細はありません</div>';
+      }
+
+      function openHistory() {
+        currentHistoryDay = null;
+        renderHistory();
+        showScreen("historyScreen");
+      }
+
+      function openDetail(entry) {
+        document.getElementById("detailTitle").textContent = "伝票 No. " + entry.slip;
+        document.getElementById("detailBody").innerHTML = '<strong>' + entry.name + '</strong><div>日付：' + currentHistoryMonth + '月' + entry.day + '日（' + entry.weekday + '）</div><div>内容：' + entry.note + '</div><div>金額：' + yen(entry.amount) + '</div>';
+        detailBackdrop.classList.add("open");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeDetail() {
+        detailBackdrop.classList.remove("open");
+        if (!editBackdrop.classList.contains("open") && !importBackdrop.classList.contains("open")) document.body.style.overflow = "";
+      }
+
+      function saveExpense() {
+        var amount = Math.max(0, Number(document.getElementById("expenseAmount").value) || 0);
+        if (!document.getElementById("expenseStore").value.trim() || !amount) {
+          showToast("店名と金額を確認してください");
+          return;
+        }
+        document.getElementById("completeMessage").textContent = "今日の経費に1件追加しました。";
+        document.getElementById("completeCount").textContent = "1件";
+        document.getElementById("completeTotal").textContent = yen(amount);
+        showScreen("completeScreen");
+      }
+
+      function showToast(message) {
+        window.clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add("show");
+        toastTimer = window.setTimeout(function () {
+          toast.classList.remove("show");
+        }, 2200);
+      }
+
+      document.querySelectorAll("[data-open-reader]").forEach(function (button) {
+        button.addEventListener("click", function () { openImportSheet(button.getAttribute("data-open-reader")); });
+      });
+
+      document.querySelectorAll("[data-import-method]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          var method = button.getAttribute("data-import-method");
+          closeImportSheet();
+          startReading(currentFlow, method);
+        });
+      });
+
+      document.querySelectorAll("[data-history-tab]").forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          currentHistoryTab = tab.getAttribute("data-history-tab");
+          renderHistory();
+        });
+      });
+
+      document.querySelectorAll(".slip-tab").forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          currentSlip = Number(tab.getAttribute("data-slip"));
+          renderSales();
+        });
+      });
+
+      document.querySelectorAll(".key").forEach(function (key) {
+        key.addEventListener("click", function () {
+          var value = key.getAttribute("data-key");
+          if (value === "clear") {
+            setEditingQty(0);
+          } else if (value === "back") {
+            setEditingQty(String(editingQty).slice(0, -1) || 0);
+          } else {
+            var next = editingQty === 0 ? value : String(editingQty) + value;
+            setEditingQty(next);
+          }
+        });
+      });
+
+      itemSelect.addEventListener("change", updateEditCalculation);
+      document.getElementById("minusButton").addEventListener("click", function () { setEditingQty(editingQty - 1); });
+      document.getElementById("plusButton").addEventListener("click", function () { setEditingQty(editingQty + 1); });
+      document.getElementById("cancelEditButton").addEventListener("click", closeEditor);
+      document.getElementById("applyEditButton").addEventListener("click", applyEdit);
+      document.getElementById("saveSalesButton").addEventListener("click", saveSales);
+      document.getElementById("saveExpenseButton").addEventListener("click", saveExpense);
+      document.getElementById("historyButton").addEventListener("click", openHistory);
+      document.getElementById("prevMonthButton").addEventListener("click", function () { currentHistoryMonth = currentHistoryMonth === 8 ? 7 : 8; currentHistoryDay = null; renderHistory(); });
+      document.getElementById("nextMonthButton").addEventListener("click", function () { currentHistoryMonth = currentHistoryMonth === 7 ? 8 : 7; currentHistoryDay = null; renderHistory(); });
+      document.getElementById("clearDayFilterButton").addEventListener("click", function () { currentHistoryDay = null; renderHistory(); });
+      document.getElementById("historyCsvButton").addEventListener("click", function () { showToast("見本のためCSVは作成しません"); });
+      document.getElementById("cancelImportButton").addEventListener("click", closeImportSheet);
+      document.getElementById("closeDetailButton").addEventListener("click", closeDetail);
+      document.getElementById("homeButton").addEventListener("click", goHome);
+      document.getElementById("completeHomeButton").addEventListener("click", goHome);
+      document.getElementById("backButton").addEventListener("click", goHome);
+      document.getElementById("continueButton").addEventListener("click", function () { openImportSheet(currentFlow); });
+      document.getElementById("csvButton").addEventListener("click", function () {
+        showToast("モックのためCSVは作成しません");
+      });
+      editBackdrop.addEventListener("click", function (event) {
+        if (event.target === editBackdrop) closeEditor();
+      });
+      importBackdrop.addEventListener("click", function (event) {
+        if (event.target === importBackdrop) closeImportSheet();
+      });
+      detailBackdrop.addEventListener("click", function (event) {
+        if (event.target === detailBackdrop) closeDetail();
+      });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          if (editBackdrop.classList.contains("open")) closeEditor();
+          else if (importBackdrop.classList.contains("open")) closeImportSheet();
+          else if (detailBackdrop.classList.contains("open")) closeDetail();
+        }
+      });
+
+      fillMasterSelect();
+      renderSales();
+      renderHistory();
+      showScreen("homeScreen");
+    }());
+  </script>
+</body>
+</html>
