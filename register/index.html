@@ -1,0 +1,102 @@
+<!doctype html>
+<!-- 最終更新：2026-09-07／v1.0.0 -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#31543a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>和古レジ</title>
+  <link rel="stylesheet" href="styles.css?v=100">
+</head>
+<body>
+  <div id="fatalBanner" class="fatal hidden" role="alert"></div>
+  <main id="app" class="app">
+    <section id="setupScreen" class="screen setup">
+      <div class="mark">和古</div>
+      <h1>レジ・厨房</h1>
+      <p>使う場所を選んで、6桁のパスコードを入力してください。</p>
+      <div class="role-grid">
+        <button class="role-btn" data-role="register"><span>レジ</span><small>iPhone</small></button>
+        <button class="role-btn" data-role="kitchen"><span>厨房</span><small>iPad</small></button>
+      </div>
+      <label class="field">パスコード<input id="passcodeInput" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="6桁"></label>
+      <button id="startButton" class="primary" disabled>接続する</button>
+      <p id="setupMessage" class="message" aria-live="polite"></p>
+    </section>
+
+    <section id="registerScreen" class="screen hidden">
+      <header class="topbar">
+        <div><strong>和古レジ</strong><span id="registerSync">接続確認中</span></div>
+        <button id="registerSettings" class="quiet">設定</button>
+      </header>
+      <div id="registerAlert" class="alert hidden" role="alert"></div>
+      <div class="mode-switch" aria-label="利用方法">
+        <button data-mode="店内" class="active">店内</button><button data-mode="持ち帰り">持ち帰り</button>
+      </div>
+      <nav id="categoryTabs" class="category-tabs" aria-label="商品分類"></nav>
+      <section id="productGrid" class="product-grid"></section>
+      <section class="cart-panel">
+        <div class="section-title"><h2>注文</h2><button id="clearCart" class="text-danger">全部消す</button></div>
+        <div id="cartList" class="cart-list"><p class="empty">商品を選んでください</p></div>
+        <button id="discountButton" class="secondary">値引きを入力</button>
+        <div class="total"><span>合計</span><strong id="cartTotal">0円</strong></div>
+        <button id="paymentButton" class="primary" disabled>会計へ</button>
+      </section>
+      <section class="today-panel">
+        <h2>今日の注文</h2>
+        <div id="registerOrders"></div>
+      </section>
+    </section>
+
+    <section id="kitchenScreen" class="screen kitchen hidden">
+      <header class="topbar kitchen-head">
+        <div><strong>厨房</strong><span id="kitchenSync">接続確認中</span></div>
+        <button id="soundButton" class="sound-btn">音を有効にする</button>
+        <button id="kitchenSettings" class="quiet">設定</button>
+      </header>
+      <div id="kitchenAlert" class="alert hidden" role="alert"></div>
+      <section>
+        <h1 class="kitchen-title">作る注文</h1>
+        <div id="kitchenOrders" class="kitchen-grid"></div>
+      </section>
+      <details class="completed"><summary>本日の完了 <span id="completedCount">0</span>件</summary><div id="completedOrders"></div></details>
+    </section>
+
+    <section id="settingsScreen" class="screen settings hidden">
+      <header class="topbar"><button id="settingsBack" class="quiet">戻る</button><strong>設定</strong><span></span></header>
+      <div class="settings-body">
+        <h2>この端末</h2>
+        <button id="changeRole" class="secondary">役割・パスコードを変更</button>
+        <h2>商品を追加・変更</h2>
+        <p class="help">商品を押すと名前・価格・表示状態を変更できます。</p>
+        <div id="settingsProducts" class="settings-list"></div>
+        <button id="addProduct" class="primary">商品を追加</button>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="setDialog" class="dialog">
+    <form method="dialog"><h2>和古セット</h2><p>おにぎりを2個選んでください。同じ具も選べます。</p><div id="fillingGrid" class="filling-grid"></div><p id="setSelection" class="selection">0 / 2個</p><div class="dialog-actions"><button value="cancel" class="secondary">やめる</button><button id="addSet" value="default" class="primary" disabled>追加する</button></div></form>
+  </dialog>
+
+  <dialog id="handmadeDialog" class="dialog">
+    <form method="dialog"><h2 id="handmadeTitle">ハンドメイド</h2><label class="field">作家・屋号<select id="artistSelect"></select></label><label id="customNameField" class="field hidden">商品名<input id="customName" maxlength="80"></label><label id="customPriceField" class="field hidden">価格<input id="customPrice" inputmode="numeric"></label><div class="dialog-actions"><button value="cancel" class="secondary">やめる</button><button id="addHandmade" value="default" class="primary">追加する</button></div></form>
+  </dialog>
+
+  <dialog id="discountDialog" class="dialog">
+    <form method="dialog"><h2>値引き</h2><label class="field">値引き額<input id="discountAmount" inputmode="numeric" placeholder="0"></label><label class="field">値引き先<select id="discountTarget"><option value="food">飲食</option></select></label><div class="dialog-actions"><button value="cancel" class="secondary">やめる</button><button id="applyDiscount" value="default" class="primary">反映する</button></div></form>
+  </dialog>
+
+  <dialog id="paymentDialog" class="dialog payment-dialog">
+    <form method="dialog"><h2>お会計</h2><div class="payment-total"><span>合計</span><strong id="paymentTotal">0円</strong></div><p>お預かり</p><div class="tender-grid"><button type="button" data-tender="exact">ちょうど</button><button type="button" data-tender="1000">1,000円</button><button type="button" data-tender="5000">5,000円</button><button type="button" data-tender="10000">10,000円</button></div><label class="field">任意の金額<input id="tenderInput" inputmode="numeric"></label><div class="change"><span>お釣り</span><strong id="changeAmount">—</strong></div><p id="paymentError" class="message"></p><div class="dialog-actions"><button value="cancel" class="secondary">戻る</button><button id="sendOrder" value="default" class="primary" disabled>会計確定・厨房へ送る</button></div></form>
+  </dialog>
+
+  <dialog id="productDialog" class="dialog">
+    <form method="dialog"><h2>商品設定</h2><input id="productId" type="hidden"><label class="field">商品名<input id="productName" maxlength="100"></label><label class="field">価格<input id="productPrice" inputmode="numeric"></label><label class="field">分類<select id="productCategory"><option>食事</option><option>お菓子</option><option>飲み物</option><option>ハンドメイド</option></select></label><label class="check"><input id="productActive" type="checkbox" checked> レジに表示する</label><div class="dialog-actions"><button value="cancel" class="secondary">やめる</button><button id="saveProduct" value="default" class="primary">保存する</button></div><p id="productMessage" class="message"></p></form>
+  </dialog>
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script src="app.js?v=100"></script>
+</body>
+</html>
