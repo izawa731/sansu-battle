@@ -1,4 +1,4 @@
-/* 和古レジ v1.0.0 / 最終更新 2026-09-07 */
+/* 和古レジ v1.0.1 / 最終更新 2026-09-14 */
 (function(){
 "use strict";
 var localHost=location.hostname==="127.0.0.1"||location.hostname==="localhost",localApi=new URLSearchParams(location.search).get("api"),API=localHost&&/^http:\/\/127\.0\.0\.1:\d+$/.test(localApi||"")?localApi:"https://wako.yumj1105.workers.dev",KEY="wako-pos-v1",state={role:"",passcode:"",serviceMode:"店内",category:"食事",products:[],artists:[],cart:[],discount:null,orders:[],paper:[],fillings:[],sound:false,lastNewIds:[],authBlocked:false,lastSync:null,polling:false};

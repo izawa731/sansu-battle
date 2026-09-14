@@ -1,5 +1,5 @@
 // 最終更新：2026-07-29
-const CACHE = "animal-dice-race-v1.3";
+const CACHE = "animal-dice-race-v1.3.1";
 const ASSETS = [
   "./",
   "./index.html",
